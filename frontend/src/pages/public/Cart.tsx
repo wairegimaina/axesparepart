@@ -5,6 +5,7 @@ import { EmptyState, Loading } from '@/components/common'
 import { QuantityInput } from '@/components/QuantityInput'
 import { Button } from '@/components/ui/button'
 import { useMe } from '@/hooks/useAuth'
+import { useAuthDialog } from '@/hooks/useAuthDialog'
 import { post } from '@/lib/api'
 import { useCart } from '@/lib/cart'
 import { CONDITION_LABEL, money } from '@/lib/format'
@@ -37,6 +38,7 @@ export default function Cart() {
   const { data: me } = useMe()
   const quote = useQuote()
   const navigate = useNavigate()
+  const openAuth = useAuthDialog((s) => s.open)
 
   if (!lines.length)
     return (
@@ -97,7 +99,7 @@ export default function Cart() {
               size="lg"
               className="mt-5 w-full"
               disabled={q.has_errors}
-              onClick={() => navigate(me ? '/checkout' : '/login?next=/checkout')}
+              onClick={() => (me ? navigate('/checkout') : openAuth('login', '/checkout'))}
             >
               <ShoppingCart /> {me ? 'Checkout' : 'Sign in to check out'}
             </Button>

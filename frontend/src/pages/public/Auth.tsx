@@ -9,7 +9,8 @@ import { GoogleButton } from '@/components/GoogleButton'
 import { Logo } from '@/components/layout/Logo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { homeFor } from '@/hooks/useAuth'
+import { PasswordInput } from '@/components/ui/password-input'
+import { homeFor, safeNext } from '@/hooks/useAuth'
 import { post } from '@/lib/api'
 import { applyApiErrors } from '@/lib/forms'
 import type { Me } from '@/lib/types'
@@ -46,45 +47,42 @@ function useSignedIn() {
   return (me: Me) => {
     qc.setQueryData(['me'], me)
     const next = params.get('next')
-    navigate(next && next.startsWith('/') && !next.startsWith('//') ? next : homeFor(me), { replace: true })
+    navigate(safeNext(next) ?? homeFor(me), { replace: true })
   }
 }
 
 const loginSchema = z.object({ email: z.email('Enter a valid email'), password: z.string().min(1, 'Enter your password') })
 
-export function Login() {
-  const signedIn = useSignedIn()
-  const [params] = useSearchParams()
-  const next = params.get('next')
-  const keepNext = next ? `?next=${encodeURIComponent(next)}` : ''
+/** The sign-in form, shared by the /login page and the sign-in overlay. */
+export function LoginForm({ onSignedIn, forgot }: { onSignedIn: (me: Me) => void; forgot: ReactNode }) {
   const [error, setError] = useState('')
   const form = useForm({ resolver: zodResolver(loginSchema), defaultValues: { email: '', password: '' } })
   const { errors, isSubmitting } = form.formState
   return (
-    <AuthShell title="Sign in" subtitle={<>New here? <Link to={`/register${keepNext}`} className="text-primary hover:underline">Create an account</Link></>}>
-      <GoogleButton text="signin_with" onSignedIn={signedIn} onError={setError} />
+    <>
+      <GoogleButton text="signin_with" onSignedIn={onSignedIn} onError={setError} />
       <form
         className="grid gap-4"
         onSubmit={form.handleSubmit(async (v) => {
           setError('')
           try {
-            signedIn(await post<Me>('/auth/login/', v))
+            onSignedIn(await post<Me>('/auth/login/', v))
           } catch (e) {
             setError(applyApiErrors(e, form.setError))
           }
         })}
       >
         <ErrorNote error={error} />
-        <Field label="Email" htmlFor="email" error={errors.email?.message}>
-          <Input id="email" type="email" autoComplete="email" {...form.register('email')} />
+        <Field label="Email" htmlFor="login-email" error={errors.email?.message}>
+          <Input id="login-email" type="email" autoComplete="email" {...form.register('email')} />
         </Field>
-        <Field label="Password" htmlFor="password" error={errors.password?.message}>
-          <Input id="password" type="password" autoComplete="current-password" {...form.register('password')} />
+        <Field label="Password" htmlFor="login-password" error={errors.password?.message}>
+          <PasswordInput id="login-password" autoComplete="current-password" {...form.register('password')} />
         </Field>
-        <Button type="submit" disabled={isSubmitting}>Sign in</Button>
-        <Link to="/forgot-password" className="text-center text-sm text-muted-foreground hover:text-foreground">Forgot your password?</Link>
+        <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Signing in…' : 'Sign in'}</Button>
+        <div className="text-center text-sm text-muted-foreground">{forgot}</div>
       </form>
-    </AuthShell>
+    </>
   )
 }
 
@@ -96,63 +94,98 @@ const customerSchema = z.object({
   password,
 })
 
-export function Register() {
-  const signedIn = useSignedIn()
+/** The create-account form, shared by the /register page and the sign-in overlay. */
+export function RegisterForm({ onSignedIn }: { onSignedIn: (me: Me) => void }) {
   const [error, setError] = useState('')
   const form = useForm({ resolver: zodResolver(customerSchema), defaultValues: { full_name: '', email: '', phone: '', password: '' } })
   const { errors, isSubmitting } = form.formState
   return (
-    <AuthShell
-      title="Create your account"
-      subtitle={<>Already have one? <Link to="/login" className="text-primary hover:underline">Sign in</Link></>}
-    >
-      <GoogleButton text="signup_with" onSignedIn={signedIn} onError={setError} />
+    <>
+      <GoogleButton text="signup_with" onSignedIn={onSignedIn} onError={setError} />
       <form
         className="grid gap-4"
         onSubmit={form.handleSubmit(async (v) => {
           setError('')
           try {
-            signedIn(await post<Me>('/auth/register/customer/', v))
+            onSignedIn(await post<Me>('/auth/register/customer/', v))
           } catch (e) {
             setError(applyApiErrors(e, form.setError))
           }
         })}
       >
         <ErrorNote error={error} />
-        <Field label="Full name" htmlFor="full_name" error={errors.full_name?.message}>
-          <Input id="full_name" autoComplete="name" {...form.register('full_name')} />
+        <Field label="Full name" htmlFor="reg-name" error={errors.full_name?.message}>
+          <Input id="reg-name" autoComplete="name" {...form.register('full_name')} />
         </Field>
-        <Field label="Email" htmlFor="email" error={errors.email?.message}>
-          <Input id="email" type="email" autoComplete="email" {...form.register('email')} />
+        <Field label="Email" htmlFor="reg-email" error={errors.email?.message}>
+          <Input id="reg-email" type="email" autoComplete="email" {...form.register('email')} />
         </Field>
-        <Field label="Phone" htmlFor="phone" error={errors.phone?.message}>
-          <Input id="phone" type="tel" autoComplete="tel" placeholder="+254…" {...form.register('phone')} />
+        <Field label="Phone" htmlFor="reg-phone" error={errors.phone?.message}>
+          <Input id="reg-phone" type="tel" autoComplete="tel" placeholder="+254…" {...form.register('phone')} />
         </Field>
-        <Field label="Password" htmlFor="password" error={errors.password?.message}>
-          <Input id="password" type="password" autoComplete="new-password" {...form.register('password')} />
+        <Field label="Password" htmlFor="reg-password" error={errors.password?.message} hint="At least 8 characters">
+          <PasswordInput id="reg-password" autoComplete="new-password" {...form.register('password')} />
         </Field>
-        <Button type="submit" disabled={isSubmitting}>Create account</Button>
+        <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Creating account…' : 'Create account'}</Button>
       </form>
+    </>
+  )
+}
+
+/** Asks for a reset link. Shared by the /forgot-password page and the sign-in overlay. */
+export function ForgotForm({ back }: { back?: ReactNode }) {
+  const [sent, setSent] = useState(false)
+  const form = useForm({ resolver: zodResolver(z.object({ email: z.email('Enter a valid email') })), defaultValues: { email: '' } })
+  if (sent) {
+    return (
+      <div className="grid gap-4">
+        <p className="text-sm">If an account uses that email, a reset link is on its way. Check your inbox (and spam).</p>
+        {back && <div className="text-center text-sm text-muted-foreground">{back}</div>}
+      </div>
+    )
+  }
+  return (
+    <form className="grid gap-4" onSubmit={form.handleSubmit(async (v) => { await post('/auth/password/reset/', v); setSent(true) })}>
+      <Field label="Email" htmlFor="forgot-email" error={form.formState.errors.email?.message}>
+        <Input id="forgot-email" type="email" autoComplete="email" {...form.register('email')} />
+      </Field>
+      <Button type="submit" disabled={form.formState.isSubmitting}>Send reset link</Button>
+      {back && <div className="text-center text-sm text-muted-foreground">{back}</div>}
+    </form>
+  )
+}
+
+export function Login() {
+  const signedIn = useSignedIn()
+  const [params] = useSearchParams()
+  const next = params.get('next')
+  const keepNext = next ? `?next=${encodeURIComponent(next)}` : ''
+  return (
+    <AuthShell title="Sign in" subtitle={<>New here? <Link to={`/register${keepNext}`} className="text-primary hover:underline">Create an account</Link></>}>
+      <LoginForm onSignedIn={signedIn} forgot={<Link to="/forgot-password" className="hover:text-foreground">Forgot your password?</Link>} />
     </AuthShell>
   )
 }
 
+export function Register() {
+  const signedIn = useSignedIn()
+  const [params] = useSearchParams()
+  const next = params.get('next')
+  const keepNext = next ? `?next=${encodeURIComponent(next)}` : ''
+  return (
+    <AuthShell
+      title="Create your account"
+      subtitle={<>Already have one? <Link to={`/login${keepNext}`} className="text-primary hover:underline">Sign in</Link></>}
+    >
+      <RegisterForm onSignedIn={signedIn} />
+    </AuthShell>
+  )
+}
 
 export function ForgotPassword() {
-  const [sent, setSent] = useState(false)
-  const form = useForm({ resolver: zodResolver(z.object({ email: z.email('Enter a valid email') })), defaultValues: { email: '' } })
   return (
     <AuthShell title="Reset your password">
-      {sent ? (
-        <p className="text-sm">Check your inbox for a reset link.</p>
-      ) : (
-        <form className="grid gap-4" onSubmit={form.handleSubmit(async (v) => { await post('/auth/password/reset/', v); setSent(true) })}>
-          <Field label="Email" htmlFor="email" error={form.formState.errors.email?.message}>
-            <Input id="email" type="email" {...form.register('email')} />
-          </Field>
-          <Button type="submit" disabled={form.formState.isSubmitting}>Send reset link</Button>
-        </form>
-      )}
+      <ForgotForm back={<Link to="/login" className="hover:text-foreground">Back to sign in</Link>} />
     </AuthShell>
   )
 }
@@ -178,7 +211,7 @@ export function ResetPassword() {
       >
         <ErrorNote error={error} />
         <Field label="New password" htmlFor="new_password" error={form.formState.errors.new_password?.message}>
-          <Input id="new_password" type="password" autoComplete="new-password" {...form.register('new_password')} />
+          <PasswordInput id="new_password" autoComplete="new-password" {...form.register('new_password')} />
         </Field>
         <Button type="submit" disabled={form.formState.isSubmitting}>Save password</Button>
       </form>

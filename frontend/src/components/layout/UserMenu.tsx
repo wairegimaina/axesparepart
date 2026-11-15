@@ -1,10 +1,11 @@
 import { LayoutDashboard, LifeBuoy, LogOut, MapPin, Package, UserRound } from 'lucide-react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { homeFor, useLogout, useMe } from '@/hooks/useAuth'
+import { useAuthDialog } from '@/hooks/useAuthDialog'
 import { cn } from '@/lib/utils'
 
 /** `dark` styles the trigger for the navy header. */
@@ -12,11 +13,12 @@ export function UserMenu({ dark }: { dark?: boolean }) {
   const { data: me } = useMe()
   const logout = useLogout()
   const navigate = useNavigate()
+  const openAuth = useAuthDialog((s) => s.open)
   if (!me) {
     return (
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" className={cn(dark && 'text-white hover:bg-white/10 hover:text-white')} render={<Link to="/login" />}>Sign in</Button>
-        <Button size="sm" className={cn('hidden sm:inline-flex', dark && 'bg-highlight text-highlight-foreground hover:bg-highlight/90')} render={<Link to="/register" />}>Create account</Button>
+        <Button variant="ghost" size="sm" className={cn(dark && 'text-white hover:bg-white/10 hover:text-white')} onClick={() => openAuth('login')}>Sign in</Button>
+        <Button size="sm" className={cn('hidden sm:inline-flex', dark && 'bg-highlight text-highlight-foreground hover:bg-highlight/90')} onClick={() => openAuth('register')}>Create account</Button>
       </div>
     )
   }

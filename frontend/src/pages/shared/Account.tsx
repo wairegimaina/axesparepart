@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { ErrorNote, Field, PageHeader } from '@/components/common'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { PasswordInput } from '@/components/ui/password-input'
 import { useMe } from '@/hooks/useAuth'
 import { get, patch, post } from '@/lib/api'
 import { applyApiErrors } from '@/lib/forms'
@@ -78,10 +79,10 @@ export default function Account() {
           <h2 className="font-semibold">Change password</h2>
           <ErrorNote error={pwError} />
           <Field label="Current password" htmlFor="a-cur" error={pw.formState.errors.current_password?.message}>
-            <Input id="a-cur" type="password" autoComplete="current-password" {...pw.register('current_password', { required: 'Required' })} />
+            <PasswordInput id="a-cur" autoComplete="current-password" {...pw.register('current_password', { required: 'Required' })} />
           </Field>
           <Field label="New password" htmlFor="a-new" error={pw.formState.errors.new_password?.message}>
-            <Input id="a-new" type="password" autoComplete="new-password" {...pw.register('new_password', { required: 'Required', minLength: { value: 8, message: 'Use at least 8 characters' } })} />
+            <PasswordInput id="a-new" autoComplete="new-password" {...pw.register('new_password', { required: 'Required', minLength: { value: 8, message: 'Use at least 8 characters' } })} />
           </Field>
           <div><Button type="submit" disabled={pw.formState.isSubmitting}>Change password</Button></div>
         </form>

@@ -1,23 +1,16 @@
 import { useQuery } from '@tanstack/react-query'
-import {
-  ArrowRight, BadgeCheck, Tag, Bike, CircleDot, Cog, Disc3, Droplets, HardHat, Link2, ShieldCheck, Truck, Waves, Zap,
-  type LucideIcon,
-} from 'lucide-react'
+import { ArrowRight, BadgeCheck, Bike, ChevronRight, LayoutGrid, ShieldCheck, Tag, Truck, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { NoPhoto, ProductCard } from '@/components/ProductCard'
 import { useBrands } from '@/pages/public/Brands'
 import { SearchBox } from '@/components/layout/PublicLayout'
 import { Button } from '@/components/ui/button'
+import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { get } from '@/lib/api'
+import { categoryIcon } from '@/lib/categoryIcons'
 import { money } from '@/lib/format'
 import type { CategoryNode, Paginated, ProductCard as Card } from '@/lib/types'
-
-const ICONS: Record<string, LucideIcon> = {
-  'Engine parts': Cog, 'Drive & transmission': Link2, Brakes: Disc3, 'Electrical & lighting': Zap,
-  'Suspension & steering': Waves, 'Wheels & tyres': CircleDot, 'Body & frame': Bike, 'Service parts': Droplets,
-  Accessories: HardHat,
-}
 
 export default function Home() {
   const categories = useQuery({ queryKey: ['categories'], queryFn: () => get<CategoryNode[]>('/categories/') })
@@ -62,17 +55,20 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Categories: a slim icon row on desktop, scrolling chips on phones. Light, so the page stays open. */}
+      {/* Categories: a slim icon row on desktop; on phones one button opens them all in a sheet (no sideways scrolling). */}
       <nav aria-label="Categories" className="border-b bg-card/60">
         <div className="mx-auto max-w-screen-2xl px-4 py-4 sm:px-6 lg:px-8 lg:py-5">
-          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 py-0.5 [mask-image:linear-gradient(to_right,black_85%,transparent)] [scrollbar-width:none] lg:grid lg:grid-cols-9 lg:gap-1 lg:overflow-visible lg:[mask-image:none] [&::-webkit-scrollbar]:hidden">
+          <div className="lg:hidden">
+            <CategorySheet categories={categories.data ?? []} />
+          </div>
+          <div className="hidden grid-cols-9 gap-1 lg:grid">
             {categories.data?.map((c) => {
-              const Icon = ICONS[c.name] ?? Cog
+              const Icon = categoryIcon(c.name)
               return (
                 <Link key={c.id} to={`/products?category=${c.slug}`}
-                  className="group flex shrink-0 items-center gap-2 rounded-full border bg-card py-1.5 pr-4 pl-1.5 text-sm font-medium whitespace-nowrap transition hover:border-primary/40 hover:text-primary lg:flex-col lg:gap-2 lg:rounded-xl lg:border-0 lg:bg-transparent lg:px-1 lg:py-2 lg:text-center lg:text-[13px] lg:leading-tight lg:whitespace-normal lg:hover:bg-primary/5">
-                  <span className="flex size-7 items-center justify-center rounded-full bg-primary/10 text-primary transition group-hover:bg-primary group-hover:text-primary-foreground lg:size-11">
-                    <Icon className="size-4 lg:size-5" />
+                  className="group flex flex-col items-center gap-2 rounded-xl px-1 py-2 text-center text-[13px] leading-tight font-medium transition hover:bg-primary/5 hover:text-primary">
+                  <span className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary transition group-hover:bg-primary group-hover:text-primary-foreground">
+                    <Icon className="size-5" />
                   </span>
                   {c.name}
                 </Link>
@@ -184,5 +180,46 @@ function HeroOffers({ deals, count }: { deals: Card[]; count: number }) {
         </div>
       )}
     </div>
+  )
+}
+
+/** Phones: "Shop by category" opens every category as a grid of big icon tiles in a bottom sheet. */
+function CategorySheet({ categories }: { categories: CategoryNode[] }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger render={
+        <button type="button" className="flex w-full items-center gap-3 rounded-xl border bg-card px-3 py-2.5 text-left text-sm font-medium shadow-xs transition hover:border-primary/40" />
+      }>
+        <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary"><LayoutGrid className="size-4" /></span>
+        <span className="flex-1">Shop by category</span>
+        <span className="text-xs text-muted-foreground">{categories.length || ''}</span>
+        <ChevronRight className="size-4 text-muted-foreground" />
+      </SheetTrigger>
+      <SheetContent side="bottom" showCloseButton={false} className="max-h-[88svh] gap-0 rounded-t-2xl">
+        <div className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-muted-foreground/25" aria-hidden />
+        <div className="flex items-center justify-between border-b px-4 py-3">
+          <SheetTitle className="text-lg font-semibold">Shop by category</SheetTitle>
+          <SheetClose render={<Button variant="ghost" size="icon-sm" aria-label="Close" />}><X /></SheetClose>
+        </div>
+        <div className="grid grid-cols-3 gap-2 overflow-y-auto overscroll-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          {categories.map((c) => {
+            const Icon = categoryIcon(c.name)
+            return (
+              <Link key={c.id} to={`/products?category=${c.slug}`} onClick={() => setOpen(false)}
+                className="flex flex-col items-center gap-2 rounded-xl border bg-card px-1 py-3 text-center text-xs leading-tight font-medium transition active:scale-[0.98] hover:border-primary/40 hover:text-primary">
+                <span className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary"><Icon className="size-5" /></span>
+                {c.name}
+              </Link>
+            )
+          })}
+          <Link to="/products" onClick={() => setOpen(false)}
+            className="flex flex-col items-center gap-2 rounded-xl border border-dashed bg-card px-1 py-3 text-center text-xs leading-tight font-medium text-primary transition hover:border-primary/40">
+            <span className="flex size-11 items-center justify-center rounded-full bg-primary text-primary-foreground"><ArrowRight className="size-5" /></span>
+            All parts
+          </Link>
+        </div>
+      </SheetContent>
+    </Sheet>
   )
 }

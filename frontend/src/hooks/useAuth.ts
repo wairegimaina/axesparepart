@@ -32,3 +32,8 @@ export function homeFor(me: Me | null | undefined) {
   if (me.supplier) return '/supplier'
   return '/'
 }
+
+/** A same-site path from ?next=, or null (never an off-site URL). */
+export function safeNext(next: string | null | undefined) {
+  return next && next.startsWith('/') && !next.startsWith('//') ? next : null
+}

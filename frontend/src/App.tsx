@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate, Outlet, RouterProvider, ScrollRestoration, useSearchParams } from 'react-router-dom'
+import { AuthDialog } from '@/components/AuthDialog'
 import { Loading } from '@/components/common'
 import { PublicLayout } from '@/components/layout/PublicLayout'
 import { homeFor, useMe } from '@/hooks/useAuth'
@@ -61,6 +62,7 @@ function Root() {
     <Suspense fallback={<Loading />}>
       <ScrollRestoration />
       <Outlet />
+      <AuthDialog />
     </Suspense>
   )
 }

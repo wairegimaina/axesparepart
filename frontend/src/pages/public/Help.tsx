@@ -3,6 +3,7 @@ import { Clock, LifeBuoy, Mail, MessageCircle, Phone } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useMe } from '@/hooks/useAuth'
+import { useAuthDialog } from '@/hooks/useAuthDialog'
 import { get } from '@/lib/api'
 import type { PublicConfig } from '@/lib/types'
 
@@ -12,6 +13,7 @@ export function usePublicConfig() {
 
 export default function Help() {
   const { data: me } = useMe()
+  const openAuth = useAuthDialog((s) => s.open)
   const s = usePublicConfig().data?.support
   const ticketsPath = me?.role === 'supplier' ? '/supplier/support/new' : '/account/support/new'
   const rows = [
@@ -43,7 +45,7 @@ export default function Help() {
           <p className="text-lg font-semibold">Send us a message</p>
           <p className="text-sm text-white/75">Track the reply in your account.</p>
         </div>
-        <Button className="bg-highlight text-highlight-foreground hover:bg-highlight/90" render={<Link to={me ? (me.role === 'admin' ? '/admin/support' : ticketsPath) : `/login?next=${encodeURIComponent('/account/support/new')}`} />}>
+        <Button className="bg-highlight text-highlight-foreground hover:bg-highlight/90" {...(me ? { render: <Link to={me.role === 'admin' ? '/admin/support' : ticketsPath} /> } : { onClick: () => openAuth('login', '/account/support/new') })}>
           <LifeBuoy /> {me ? 'New help request' : 'Sign in to send a message'}
         </Button>
       </div>

@@ -4,6 +4,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate, useSearchParams } from
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useMe } from '@/hooks/useAuth'
+import { useAuthDialog } from '@/hooks/useAuthDialog'
 import { useCartCount } from '@/lib/cart'
 import { cn } from '@/lib/utils'
 import { Logo } from './Logo'
@@ -57,6 +58,7 @@ export function PublicLayout() {
   // The home page has its own big search box, so skip the header's mobile one there.
   const onHome = useLocation().pathname === '/'
   const { data: me } = useMe()
+  const openAuth = useAuthDialog((st) => st.open)
   return (
     <div className="flex min-h-svh flex-col bg-background">
       <header className="sticky top-0 z-30 bg-brand text-brand-foreground print:hidden">
@@ -99,8 +101,8 @@ export function PublicLayout() {
           </div>
           <div className="grid content-start gap-2">
             <p className="font-medium text-highlight">Account</p>
-            <Link to="/login" className="text-white/70 hover:text-white">Sign in</Link>
-            <Link to="/register" className="text-white/70 hover:text-white">Create account</Link>
+            <button type="button" onClick={() => openAuth('login')} className="text-left text-white/70 hover:text-white">Sign in</button>
+            <button type="button" onClick={() => openAuth('register')} className="text-left text-white/70 hover:text-white">Create account</button>
           </div>
         </div>
         <p className="border-t border-white/10 py-4 text-center text-xs text-white/60">© {new Date().getFullYear()} Axe Genuine Spare Parts</p>
