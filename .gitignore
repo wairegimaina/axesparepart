@@ -20,3 +20,4 @@ backend/.dev-test-customer
 backend/.dev-test-staff
 backend/.dev-logins
 backend/.models/
+backend/.env.render
