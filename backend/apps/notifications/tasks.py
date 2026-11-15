@@ -13,4 +13,7 @@ def send_email(self, to: str, subject: str, body: str, html: str | None = None):
         send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [to], fail_silently=False, html_message=html)
     except Exception as exc:  # network / provider errors: retry later
         log.warning("Email to %s failed: %s", to, exc)
+        if self.request.is_eager:
+            # No worker (no REDIS_URL): retrying would block the web request, so log it and move on.
+            return
         raise self.retry(exc=exc)
