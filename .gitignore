@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+backend/.venv/
+backend/.env
+backend/staticfiles/
+backend/media/
+backend/private_media/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+*.tsbuildinfo
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/
+backend/.dev-test-customer
+backend/.dev-test-staff
+backend/.dev-logins
+backend/.models/
