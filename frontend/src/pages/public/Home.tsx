@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { usePageMeta } from '@/hooks/usePageMeta'
 import { ArrowRight, BadgeCheck, Bike, ChevronRight, LayoutGrid, ShieldCheck, Tag, Truck, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -13,6 +14,7 @@ import { money } from '@/lib/format'
 import type { CategoryNode, Paginated, ProductCard as Card } from '@/lib/types'
 
 export default function Home() {
+  usePageMeta('')
   const categories = useQuery({ queryKey: ['categories'], queryFn: () => get<CategoryNode[]>('/categories/') })
   const latest = useQuery({
     queryKey: ['products', 'home'],

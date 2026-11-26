@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 
 const SITE = 'Axe Spare Parts'
+/** The one address Google should index (www.axespareparts.com redirects here). */
+const CANONICAL_ORIGIN = 'https://axespareparts.com'
 const DEFAULT_DESCRIPTION =
   'Genuine and quality motorcycle spare parts for boda bodas and other bikes in Kenya. Order online, delivered across all 47 counties.'
 
@@ -12,6 +14,22 @@ function setMeta(attr: 'name' | 'property', key: string, value: string) {
     document.head.appendChild(el)
   }
   el.content = value
+}
+
+function setCanonical(href: string) {
+  let el = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')
+  if (!el) {
+    el = document.createElement('link')
+    el.rel = 'canonical'
+    document.head.appendChild(el)
+  }
+  el.href = href
+}
+
+/** This page's address on the main domain; only the category filter is kept from the query string. */
+function canonicalUrl() {
+  const category = new URLSearchParams(window.location.search).get('category')
+  return `${CANONICAL_ORIGIN}${window.location.pathname}${category ? `?category=${encodeURIComponent(category)}` : ''}`
 }
 
 /**
@@ -28,7 +46,9 @@ export function usePageMeta(title?: string, description?: string, structuredData
     setMeta('name', 'description', desc)
     setMeta('property', 'og:title', fullTitle)
     setMeta('property', 'og:description', desc)
-    setMeta('property', 'og:url', window.location.href)
+    const url = canonicalUrl()
+    setCanonical(url)
+    setMeta('property', 'og:url', url)
     let script: HTMLScriptElement | null = null
     if (json) {
       script = document.createElement('script')
@@ -40,6 +60,7 @@ export function usePageMeta(title?: string, description?: string, structuredData
       document.title = SITE
       setMeta('name', 'description', DEFAULT_DESCRIPTION)
       script?.remove()
+      document.head.querySelector('link[rel="canonical"]')?.remove()
     }
   }, [title, description, json])
 }
