@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.db.models.deletion import ProtectedError
 from django.db.models import Count, Exists, F, OuterRef, Prefetch, Q, Sum
 from django.db.models.functions import TruncMonth
 from django.http import Http404
@@ -459,9 +460,7 @@ class AdminCustomerDetailView(OrdersStaffView, APIView):
     permission_classes = [IsAdmin]
 
     def get(self, request, pk):
-        u = User.objects.filter(role=User.Role.CUSTOMER, pk=pk).first()
-        if u is None:
-            raise Http404
+        u = self._customer(pk)
         orders = Order.objects.filter(customer=u).annotate(supplier_count=Count("supplier_orders")).prefetch_related(
             "supplier_orders__items")
         return Response({
@@ -469,4 +468,71 @@ class AdminCustomerDetailView(OrdersStaffView, APIView):
             "date_joined": u.date_joined, "last_login": u.last_login,
             "addresses": AddressSerializer(u.addresses.all(), many=True).data,
             "orders": AdminOrderListSerializer(orders, many=True).data,
+            "can_delete": not self._delete_blockers(u),
         })
+
+    def _customer(self, pk):
+        u = User.objects.filter(role=User.Role.CUSTOMER, pk=pk).first()
+        if u is None:
+            raise Http404
+        return u
+
+    @staticmethod
+    def _delete_blockers(u) -> str:
+        """Why this customer can't be deleted: orders and help requests are records we must keep."""
+        from apps.support.models import Ticket
+        if u.orders.exists():
+            return "This customer has orders, which must be kept. Deactivate the account instead."
+        if Ticket.objects.filter(opened_by=u).exists():
+            return "This customer has help requests, which must be kept. Deactivate the account instead."
+        return ""
+
+    def patch(self, request, pk):
+        """Edit name, email, phone, or turn sign-in on/off."""
+        u = self._customer(pk)
+        data, errors, changed = request.data, {}, {}
+        if "full_name" in data:
+            name = str(data["full_name"]).strip()
+            if not name:
+                errors["full_name"] = ["Enter a name."]
+            changed["full_name"] = name
+        if "email" in data:
+            email = str(data["email"]).strip().lower()
+            if not email or "@" not in email:
+                errors["email"] = ["Enter a valid email."]
+            elif User.objects.filter(email__iexact=email).exclude(pk=u.pk).exists():
+                errors["email"] = ["Another account already uses this email."]
+            changed["email"] = email
+        if "phone" in data:
+            phone = str(data["phone"]).strip()
+            if len(phone) > 20:
+                errors["phone"] = ["Phone is too long."]
+            changed["phone"] = phone
+        if "is_active" in data:
+            changed["is_active"] = data["is_active"] in (True, "true", "1", 1)
+        if errors:
+            raise ValidationError(errors)
+        before = {k: getattr(u, k) for k in changed}
+        for k, v in changed.items():
+            setattr(u, k, v)
+        u.save(update_fields=list(changed) or None)
+        diff = {k: [before[k], v] for k, v in changed.items() if before[k] != v}
+        if diff:
+            audit(request, "customer.update", u, f"Edited customer {u.email}", changes=diff)
+        return self.get(request, pk)
+
+    def delete(self, request, pk):
+        if request.user.is_orders_staff:
+            return Response({"detail": "Only full admins can delete customers."}, status=status.HTTP_403_FORBIDDEN)
+        u = self._customer(pk)
+        reason = self._delete_blockers(u)
+        if reason:
+            return Response({"detail": reason}, status=status.HTTP_409_CONFLICT)
+        try:
+            with transaction.atomic():
+                audit(request, "customer.delete", u, f"Deleted customer {u.email}", email=u.email, name=u.full_name)
+                u.delete()
+        except ProtectedError:
+            return Response({"detail": "This customer has records that must be kept. Deactivate the account instead."},
+                            status=status.HTTP_409_CONFLICT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
