@@ -60,7 +60,7 @@ export default function Settings() {
         <section className="grid gap-5 surface p-5 sm:grid-cols-2">
           <h2 className="font-semibold sm:col-span-2">Pricing & stock</h2>
           <Field label="Default markup (%)" htmlFor="markup" error={e.default_markup_percent?.message}
-            hint={`A KES 1,000 part sells for KES ${Math.round(1000 * (1 + markup / 100)).toLocaleString()}.`}>
+            hint={`A KES 1,000 part sells for KES ${Math.round(1000 * (1 + markup / 100)).toLocaleString()}. Categories can set their own (Catalogue → Product categories).`}>
             <Input id="markup" type="number" step="0.01" min="0" {...form.register('default_markup_percent')} />
           </Field>
           <Field label="Default low-stock alert" htmlFor="low" error={e.default_low_stock_threshold?.message} >

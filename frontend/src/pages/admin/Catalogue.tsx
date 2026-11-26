@@ -165,6 +165,8 @@ function ProductsTab() {
   )
 }
 
+const pct = (v?: string | null) => (v == null ? '—' : `${Number(v)}%`)
+
 function CategoriesTab() {
   const qc = useQueryClient()
   const list = useQuery({ queryKey: ['admin', 'categories'], queryFn: () => get<Category[]>('/admin/categories/') })
@@ -180,10 +182,27 @@ function CategoriesTab() {
     if (next && next !== c.name) run(async () => { try { await patch(`/admin/categories/${c.id}/`, { name: next }); refresh() } catch (e) { toast.error((e as Error).message) } })
   }
   const toggle = (c: Category) => run(async () => { await patch(`/admin/categories/${c.id}/`, { is_active: !c.is_active }); refresh() })
+  const setMarkup = (c: Category) => {
+    const next = window.prompt(
+      `Markup % for ${c.name}. Customers pay the supplier's price plus this.\nLeave empty to use ${c.parent ? 'the parent category' : 'the default'} (now ${pct(c.effective_markup_percent)}).`,
+      c.markup_percent ?? '')
+    if (next === null) return
+    const value = next.trim() === '' ? null : next.trim()
+    if (value !== null && !(Number(value) >= 0)) { toast.error('Enter a percentage, e.g. 20'); return }
+    run(async () => {
+      try { await patch(`/admin/categories/${c.id}/`, { markup_percent: value }); refresh(); toast.success('Markup saved') }
+      catch (e) { toast.error((e as Error).message) }
+    })
+  }
   const Item = ({ c, child }: { c: Category; child?: boolean }) => (
     <li className={`flex items-center gap-2 py-1.5 ${child ? 'pl-6' : ''}`}>
       <span className={`flex-1 text-sm ${child ? '' : 'font-medium'} ${c.is_active ? '' : 'text-muted-foreground line-through'}`}>{c.name}</span>
       <span className="hidden font-mono text-xs text-muted-foreground sm:inline">{c.slug}</span>
+      <span className={`w-28 text-right text-xs tabular-nums ${c.markup_percent != null ? 'font-semibold' : 'text-muted-foreground'}`}
+        title={c.markup_percent != null ? 'Set on this category' : 'Inherited from the parent category or the default'}>
+        {pct(c.effective_markup_percent)} markup{c.markup_percent == null && ' ↑'}
+      </span>
+      <Button size="xs" variant="ghost" onClick={() => setMarkup(c)}>Markup</Button>
       <Button size="xs" variant="ghost" onClick={() => rename(c)}>Rename</Button>
       <Button size="xs" variant="ghost" onClick={() => toggle(c)}>{c.is_active ? 'Deactivate' : 'Activate'}</Button>
     </li>
@@ -203,6 +222,10 @@ function CategoriesTab() {
         </NativeSelect>
         <Button type="submit" disabled={busy || !name.trim()}><Plus /> Add</Button>
       </form>
+      <p className="text-sm text-muted-foreground">
+        Each category can have its own markup. Sub-categories marked ↑ use their parent's, and categories without one use the
+        default markup from Settings.
+      </p>
       {list.isLoading ? <Loading /> : (
         <ul className="divide-y surface px-4">
           {roots.map((r) => (

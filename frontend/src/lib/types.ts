@@ -44,6 +44,10 @@ export interface Category extends Ref {
   description: string
   is_active: boolean
   position: number
+  /** Admin only: this category's own markup; null means it uses its parent's, else the default. */
+  markup_percent?: string | null
+  /** Admin only: the markup that applies after inheriting. */
+  effective_markup_percent?: string
 }
 export interface Brand extends Ref {
   logo_url: string
@@ -102,6 +106,8 @@ export interface SupplierProfile extends Omit<PublicSupplier, 'product_count'> {
   business_email: string
   business_phone: string
   payout_details: string
+  /** Part of the marketplace markup paid to this supplier, as a % of their price. Set by admins. */
+  markup_share_percent: string
   status: SupplierStatus
   status_reason: string
   reviewed_at: string | null
@@ -199,6 +205,10 @@ export interface Listing {
   condition: Condition
   notes: string
   supplier_price: string
+  /** Per unit, today: the supplier's share of the marketplace markup, paid on top of their price. */
+  markup_share: string
+  /** Per unit, today: what the supplier is paid (their price + markup share). */
+  you_receive: string
   customer_price: string
   quantity: number
   min_order_quantity: number
@@ -440,6 +450,8 @@ export interface SupplierOrderDetail extends SupplierOrderSummary {
     on_request: boolean
     quantity: number
     supplier_unit_price: string
+    /** Markup share included in supplier_unit_price, per unit. */
+    supplier_share: string
     supplier_line_total: string
     status: 'active' | 'cancelled'
   }[]

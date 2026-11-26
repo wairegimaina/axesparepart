@@ -79,7 +79,7 @@ export default function SupplierOrderDetailPage() {
               <TableHead>Item</TableHead>
               <TableHead className="hidden sm:table-cell">SKU</TableHead>
               <TableHead className="text-right">Qty</TableHead>
-              <TableHead className="text-right">Your price</TableHead>
+              <TableHead className="text-right">You get (each)</TableHead>
               <TableHead className="text-right">Total</TableHead>
             </TableRow>
           </TableHeader>
@@ -92,7 +92,10 @@ export default function SupplierOrderDetailPage() {
                 </TableCell>
                 <TableCell className="hidden font-mono text-xs sm:table-cell">{i.sku || '—'}</TableCell>
                 <TableCell className="text-right font-semibold tabular-nums">{i.quantity}</TableCell>
-                <TableCell className="text-right tabular-nums">{money(i.supplier_unit_price)}</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {money(i.supplier_unit_price)}
+                  {Number(i.supplier_share) > 0 && <p className="text-xs text-emerald-700 dark:text-emerald-400">incl. {money(i.supplier_share)} share</p>}
+                </TableCell>
                 <TableCell className="text-right tabular-nums">{money(i.supplier_line_total)}</TableCell>
               </TableRow>
             ))}

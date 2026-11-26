@@ -15,6 +15,7 @@ from rest_framework.exceptions import APIException, PermissionDenied, Validation
 
 from apps.core.models import MarketplaceSettings
 from apps.inventory.models import StockMovement, SupplierListing
+from apps.inventory.pricing import Markups
 from apps.inventory.queries import published_q
 from apps.notifications.service import notify, notify_admins, notify_supplier
 from apps.payments.models import Payment, PaymentMethod, Refund
@@ -59,6 +60,7 @@ class Quote:
     county: str = ""
     delivery_available: bool = True
     delivery_days: tuple[int, int] | None = None
+    markups: Markups | None = None
 
     @property
     def has_errors(self):
@@ -82,14 +84,14 @@ def build_quote(items, lock: bool = False, county: str | None = None) -> Quote:
     listings = {lst.pk: lst for lst in qs}
     published_ids = set(L.objects.filter(published_q(), pk__in=merged.keys()).values_list("pk", flat=True))
 
-    quote = Quote()
+    quote = Quote(markups=Markups.load())
     for listing_id, qty in merged.items():
         lst = listings.get(listing_id)
         line = QuoteLine(listing=lst, listing_id=listing_id, quantity=qty)
         if lst is None or listing_id not in published_ids:
             line.error = "This item is no longer available."
         else:
-            line.unit_price = lst.selling_price(settings.default_markup_percent)
+            line.unit_price = lst.selling_price(quote.markups)
             if qty < lst.min_order_quantity:
                 line.error = f"The minimum order for this item is {lst.min_order_quantity}."
             elif lst.availability == L.Availability.OUT_OF_STOCK:
@@ -226,7 +228,8 @@ def place_order(customer, items, address: dict, notes: str = "", expected_total=
             order=order, supplier_order=so, listing=lst, product_name=lst.product.name, product_slug=lst.product.slug,
             part_number=lst.product.part_number, brand_name=lst.product.brand.name, condition=lst.condition,
             sku=lst.sku, warranty=lst.warranty, on_request=lst.availability == L.Availability.ON_REQUEST,
-            quantity=ln.quantity, unit_price=ln.unit_price, supplier_unit_price=lst.current_supplier_price,
+            quantity=ln.quantity, unit_price=ln.unit_price,
+            supplier_unit_price=lst.supplier_payout(quote.markups), supplier_share=lst.supplier_share(quote.markups),
         )
         _reserve(item, customer)
 
@@ -532,7 +535,10 @@ def reassign_item(item: OrderItem, admin, new_listing: SupplierListing) -> Order
                                           released_at=timezone.now())
     old = item.supplier_order
     item.supplier_order, item.listing = so, new_listing
-    item.supplier_unit_price, item.sku, item.warranty = new_listing.current_supplier_price, new_listing.sku, new_listing.warranty
+    # The customer keeps their price; the new supplier is paid at their own price and share.
+    markups = Markups.load()
+    item.supplier_unit_price, item.supplier_share = new_listing.supplier_payout(markups), new_listing.supplier_share(markups)
+    item.sku, item.warranty = new_listing.sku, new_listing.warranty
     item.condition = new_listing.condition
     item.on_request = new_listing.availability == L.Availability.ON_REQUEST
     item.save()

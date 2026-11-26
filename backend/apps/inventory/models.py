@@ -8,6 +8,8 @@ from django.utils import timezone
 
 from apps.core.models import MarketplaceSettings, TimeStampedModel
 
+from .pricing import as_markups
+
 
 class SupplierListing(TimeStampedModel):
     """One supplier's offer of one product: their SKU, condition, price, stock and terms."""
@@ -84,13 +86,15 @@ class SupplierListing(TimeStampedModel):
             ),
         ]
 
-    def regular_price(self, markup_percent: Decimal | None = None) -> Decimal:
+    def markup_percent(self, markups=None) -> Decimal:
+        """The markup for this part's category. `markups`: Markups, a flat Decimal, or None to load."""
+        return as_markups(markups).for_category(self.product.category_id)
+
+    def regular_price(self, markups=None) -> Decimal:
         """Customer price without any offer. Never expose supplier_price outside the admin and the owning supplier."""
         if self.price_override is not None:
             return self.price_override
-        if markup_percent is None:
-            markup_percent = MarketplaceSettings.load().default_markup_percent
-        price = self.supplier_price * (Decimal("1") + markup_percent / Decimal("100"))
+        price = self.supplier_price * (Decimal("1") + self.markup_percent(markups) / Decimal("100"))
         return price.quantize(Decimal("1"), rounding=ROUND_HALF_UP)
 
     @property
@@ -101,15 +105,35 @@ class SupplierListing(TimeStampedModel):
     def _off(self, amount: Decimal, places: str) -> Decimal:
         return (amount * (Decimal("100") - self.deal_percent) / Decimal("100")).quantize(Decimal(places), rounding=ROUND_HALF_UP)
 
-    def selling_price(self, markup_percent: Decimal | None = None) -> Decimal:
+    def selling_price(self, markups=None) -> Decimal:
         """What the customer pays today: the regular price, less any live offer."""
-        price = self.regular_price(markup_percent)
+        price = self.regular_price(markups)
         return self._off(price, "1") if self.deal_active else price
 
     @property
     def current_supplier_price(self) -> Decimal:
-        """What we owe the supplier per unit today. A live offer lowers it by the same percentage."""
+        """The supplier's own price per unit today. A live offer lowers it by the same percentage."""
         return self._off(self.supplier_price, "0.01") if self.deal_active else self.supplier_price
+
+    def supplier_share(self, markups=None) -> Decimal:
+        """Per unit: the part of the markup this supplier gets on top of their price.
+
+        The supplier's share % (Admin → Suppliers) is a percentage of their price, capped at the
+        category's markup, and never more than the customer actually pays above their price
+        (an admin price override or an offer can leave less room).
+        """
+        markups = as_markups(markups)
+        pct = min(self.supplier.markup_share_percent, self.markup_percent(markups))
+        if pct <= 0:
+            return Decimal("0.00")
+        base = self.current_supplier_price
+        share = (base * pct / Decimal("100")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        room = self.selling_price(markups) - base
+        return max(Decimal("0.00"), min(share, room)).quantize(Decimal("0.01"))
+
+    def supplier_payout(self, markups=None) -> Decimal:
+        """What we owe the supplier per unit today: their price plus their markup share."""
+        return self.current_supplier_price + self.supplier_share(markups)
 
     @property
     def effective_low_stock_threshold(self) -> int:

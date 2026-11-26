@@ -34,7 +34,7 @@ class PublicOfferSerializer(serializers.ModelSerializer):
         if not obj.deal_active:
             return None
         return {"percent": obj.deal_percent, "title": obj.deal_title, "ends_at": obj.deal_ends_at,
-                "was_price": str(obj.regular_price())}
+                "was_price": str(obj.regular_price(self.context.get("markup")))}
 
     def get_price(self, obj):
         price = getattr(obj, "customer_price", None)
@@ -83,11 +83,14 @@ class SupplierListingSerializer(serializers.ModelSerializer):
     can_edit_product = serializers.SerializerMethodField()
     status_display = serializers.CharField(source="get_status_display", read_only=True)
     deal = serializers.SerializerMethodField()
+    markup_share = serializers.SerializerMethodField()
+    you_receive = serializers.SerializerMethodField()
 
     class Meta:
         model = SupplierListing
         fields = [
-            "id", "product", "sku", "condition", "notes", "supplier_price", "customer_price", "quantity",
+            "id", "product", "sku", "condition", "notes", "supplier_price", "markup_share", "you_receive",
+            "customer_price", "quantity",
             "min_order_quantity", "low_stock_threshold", "is_low_stock", "warranty", "availability", "status",
             "status_display", "rejection_reason", "submitted_at", "approved_at", "view_count", "images",
             "can_edit_product", "created_at", "updated_at", "deal",
@@ -96,6 +99,14 @@ class SupplierListingSerializer(serializers.ModelSerializer):
     def get_customer_price(self, obj):
         """The regular customer price; any offer is shown separately in `deal`."""
         return str(obj.regular_price(self.context.get("markup")))
+
+    def get_markup_share(self, obj):
+        """Per unit, today: the supplier's part of the marketplace markup, paid on top of their price."""
+        return str(obj.supplier_share(self.context.get("markup")))
+
+    def get_you_receive(self, obj):
+        """Per unit, today: what the supplier is paid for each one sold (their price + markup share)."""
+        return str(obj.supplier_payout(self.context.get("markup")))
 
     def get_deal(self, obj):
         if not obj.deal_status:

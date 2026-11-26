@@ -411,6 +411,7 @@ export default function ProductForm() {
           <span className="flex flex-wrap items-center gap-2">
             <StatusBadge status={listing!.status} />
             <span>Customer price {money(listing!.customer_price)}</span>
+            <span>· You get {money(listing!.you_receive)} each{Number(listing!.markup_share) > 0 && ` (your price + ${money(listing!.markup_share)} share)`}</span>
             <span>· {listing!.view_count} views</span>
           </span>
         )}

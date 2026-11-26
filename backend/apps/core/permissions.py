@@ -22,7 +22,8 @@ class IsAdmin(BasePermission):
         return True
 
 
-COST_KEYS = {"supplier_cost", "supplier_unit_price", "supplier_line_total", "margin", "parts_margin", "supplier_price"}
+COST_KEYS = {"supplier_cost", "supplier_unit_price", "supplier_line_total", "margin", "parts_margin", "supplier_price",
+             "supplier_share", "markup_share", "you_receive", "markup_share_percent"}
 
 
 def strip_costs(data):

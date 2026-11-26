@@ -15,9 +15,9 @@ from rest_framework.views import APIView
 from apps.core import storage
 from apps.core.background import wants_cutout
 from apps.core.audit import audit
-from apps.core.models import MarketplaceSettings
 from apps.core.permissions import IsAdmin
 from apps.inventory.models import SupplierListing
+from apps.inventory.pricing import Markups
 from apps.inventory.queries import deal_active_q, published_listings, published_q, regular_price_expr, selling_price_expr
 
 from .models import Brand, Category, Product, ProductImage, normalize_part_number
@@ -92,7 +92,7 @@ class PublicProductViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         p = self.request.query_params
-        markup = MarketplaceSettings.load().default_markup_percent
+        markups = Markups.load()
         offer_q = self._offer_q("listings__")
         offers_qs = SupplierListing.objects.filter(self._offer_q("")).select_related("supplier")
         in_stock_offer = offers_qs.filter(
@@ -103,8 +103,8 @@ class PublicProductViewSet(viewsets.ReadOnlyModelViewSet):
             .select_related("brand", "category")
             .annotate(
                 offer_count=Count("listings", filter=offer_q, distinct=True),
-                min_price=Min(selling_price_expr(markup, "listings__"), filter=offer_q),
-                regular_min_price=Min(regular_price_expr(markup, "listings__"), filter=offer_q),
+                min_price=Min(selling_price_expr(markups, "listings__", "category_id"), filter=offer_q),
+                regular_min_price=Min(regular_price_expr(markups, "listings__", "category_id"), filter=offer_q),
                 deal_percent=Max("listings__deal_percent", filter=offer_q & deal_active_q("listings__")),
                 in_stock=Exists(in_stock_offer),
             )
@@ -143,11 +143,11 @@ class PublicProductViewSet(viewsets.ReadOnlyModelViewSet):
         )
         if product is None:
             raise Http404
-        markup = MarketplaceSettings.load().default_markup_percent
+        markups = Markups.load()
         offers = list(
             published_listings()
             .filter(product=product)
-            .annotate(customer_price=selling_price_expr(markup))
+            .annotate(customer_price=selling_price_expr(markups))
             .prefetch_related("images")
             .order_by("customer_price")
         )
@@ -155,7 +155,7 @@ class PublicProductViewSet(viewsets.ReadOnlyModelViewSet):
             raise Http404
         Product.objects.filter(pk=product.pk).update(view_count=F("view_count") + 1)
         SupplierListing.objects.filter(pk__in=[o.pk for o in offers]).update(view_count=F("view_count") + 1)
-        ser = ProductDetailSerializer(product, context={"request": request, "offers": offers})
+        ser = ProductDetailSerializer(product, context={"request": request, "offers": offers, "markup": markups})
         return Response(ser.data)
 
 

@@ -20,6 +20,7 @@ from apps.suppliers.models import SupplierMember
 
 from . import importer, services
 from .models import ListingEvent, StockMovement, SupplierListing
+from .pricing import Markups
 from .serializers import (
     AdminListingSerializer, ApproveSerializer, BulkStockSerializer, CatalogueMatchSerializer, ImageSerializer,
     ListingEventSerializer, ListingWriteSerializer, PriceSerializer, RejectSerializer, StockAdjustSerializer,
@@ -34,7 +35,7 @@ MAX_IMAGES = settings.MAX_PRODUCT_IMAGES
 
 def pricing_context(extra=None):
     s = MarketplaceSettings.load()
-    ctx = {"markup": s.default_markup_percent, "low_stock_default": s.default_low_stock_threshold}
+    ctx = {"markup": Markups.load(), "low_stock_default": s.default_low_stock_threshold}
     ctx.update(extra or {})
     return ctx
 

@@ -4,10 +4,22 @@ from .models import Brand, Category, Product, ProductImage
 
 
 class CategorySerializer(serializers.ModelSerializer):
+    """Admin category editor. `effective_markup_percent` is what applies after inheriting from parents."""
+
+    effective_markup_percent = serializers.SerializerMethodField()
+
     class Meta:
         model = Category
-        fields = ["id", "name", "slug", "parent", "description", "is_active", "position"]
+        fields = ["id", "name", "slug", "parent", "description", "is_active", "position", "markup_percent",
+                  "effective_markup_percent"]
         read_only_fields = ["slug"]
+
+    def get_effective_markup_percent(self, obj):
+        from apps.inventory.pricing import Markups
+
+        if "markups" not in self.context:
+            self.context["markups"] = Markups.load()
+        return str(self.context["markups"].for_category(obj.id))
 
 
 class CategoryTreeSerializer(serializers.ModelSerializer):
@@ -91,9 +103,9 @@ class ProductCardSerializer(serializers.ModelSerializer):
         if not offers:
             return None
         if "markup" not in self.context:
-            from apps.core.models import MarketplaceSettings
+            from apps.inventory.pricing import Markups
 
-            self.context["markup"] = MarketplaceSettings.load().default_markup_percent
+            self.context["markup"] = Markups.load()
         markup = self.context["markup"]
         stocked = [o for o in offers if o.availability == "in_stock" and o.quantity >= o.min_order_quantity]
         if not stocked:

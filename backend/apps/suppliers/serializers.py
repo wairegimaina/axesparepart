@@ -45,10 +45,11 @@ class SupplierProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Supplier
         fields = PUBLIC_FIELDS + PRIVATE_FIELDS + [
-            "business_category_ids", "status", "status_reason", "reviewed_at",
+            "business_category_ids", "status", "status_reason", "reviewed_at", "markup_share_percent",
         ]
         read_only_fields = [
             "slug", "logo_url", "cover_url", "is_verified", "status", "status_reason", "reviewed_at",
+            "markup_share_percent",
         ]
 
     def validate_year_established(self, value):
@@ -138,7 +139,9 @@ class AdminSupplierSerializer(SupplierProfileSerializer):
         fields = SupplierProfileSerializer.Meta.fields + [
             "documents", "members", "listing_counts", "verified_at", "created_at",
         ]
-        read_only_fields = SupplierProfileSerializer.Meta.read_only_fields + ["verified_at", "created_at"]
+        # Admins set the supplier's markup share; the supplier only sees it.
+        read_only_fields = [f for f in SupplierProfileSerializer.Meta.read_only_fields if f != "markup_share_percent"] + [
+            "verified_at", "created_at"]
 
     def validate(self, attrs):
         return attrs  # admins may edit locked fields
@@ -159,7 +162,7 @@ class AdminSupplierListSerializer(serializers.ModelSerializer):
         model = Supplier
         fields = [
             "id", "name", "slug", "status", "is_verified", "county", "town", "business_phone",
-            "owner_email", "document_count", "pending_documents", "created_at",
+            "owner_email", "document_count", "pending_documents", "created_at", "markup_share_percent",
         ]
 
     def get_owner_email(self, obj):

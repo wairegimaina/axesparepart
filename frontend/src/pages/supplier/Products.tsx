@@ -104,7 +104,10 @@ export default function Products() {
                     </TableCell>
                     <TableCell className="hidden font-mono text-xs md:table-cell">{l.sku || '—'}</TableCell>
                     <TableCell className="hidden sm:table-cell">{CONDITION_LABEL[l.condition]}</TableCell>
-                    <TableCell className="text-right tabular-nums">{money(l.supplier_price)}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {money(l.supplier_price)}
+                      {Number(l.markup_share) > 0 && <p className="text-xs text-emerald-700 dark:text-emerald-400">you get {money(l.you_receive)}</p>}
+                    </TableCell>
                     <TableCell className="hidden text-right text-muted-foreground tabular-nums lg:table-cell">{money(l.customer_price)}</TableCell>
                     <TableCell className={`text-right tabular-nums ${l.is_low_stock ? 'font-medium text-amber-700 dark:text-amber-400' : ''}`}>{l.quantity}</TableCell>
                     <TableCell>

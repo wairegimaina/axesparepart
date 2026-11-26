@@ -1,5 +1,7 @@
 import re
+from decimal import Decimal
 
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
 
@@ -21,6 +23,11 @@ class Category(models.Model):
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
     position = models.PositiveIntegerField(default=0)
+    markup_percent = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("500"))],
+        help_text="Marketplace markup for parts in this category. Empty: use the parent's, else the default.",
+    )
 
     class Meta:
         ordering = ["position", "name"]

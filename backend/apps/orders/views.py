@@ -20,6 +20,7 @@ from apps.core.models import MarketplaceSettings
 from apps.core.permissions import IsAdmin, OrdersStaffView, IsCustomer, SupplierRolePermission
 from apps.customers.models import Address
 from apps.inventory.models import SupplierListing
+from apps.inventory.pricing import Markups
 from apps.inventory.queries import published_listings
 
 from . import services
@@ -396,7 +397,7 @@ class AdminOrderItemViewSet(OrdersStaffView, viewsets.GenericViewSet):
     def alternatives(self, request, pk=None):
         """Other suppliers' published offers of the same part, cheapest first."""
         item = self.get_object()
-        markup = MarketplaceSettings.load().default_markup_percent
+        markups = Markups.load()
         offers = (
             published_listings().filter(product_id=item.listing.product_id)
             .exclude(supplier_id=item.supplier_order.supplier_id)
@@ -406,7 +407,7 @@ class AdminOrderItemViewSet(OrdersStaffView, viewsets.GenericViewSet):
         return Response([
             {"listing_id": o.id, "supplier": o.supplier.name, "supplier_verified": o.supplier.is_verified,
              "condition": o.condition, "availability": o.availability, "quantity": o.quantity,
-             "supplier_price": str(o.supplier_price), "customer_price": str(o.selling_price(markup)),
+             "supplier_price": str(o.supplier_price), "customer_price": str(o.selling_price(markups)),
              "enough_stock": o.availability == "on_request" or o.quantity >= item.quantity}
             for o in offers
         ])

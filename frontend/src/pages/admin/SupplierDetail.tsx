@@ -7,7 +7,8 @@ import { Loading, Markdown, PageHeader, StatusBadge, SupplierStatusBadge, Verifi
 import { ReasonDialog } from '@/components/ReasonDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { get, post } from '@/lib/api'
+import { Input } from '@/components/ui/input'
+import { get, patch, post } from '@/lib/api'
 import { bytes, date, dateTime } from '@/lib/format'
 import type { Member, SupplierDocument, SupplierProfile } from '@/lib/types'
 
@@ -27,6 +28,43 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
       <dt className="text-muted-foreground">{label}</dt>
       <dd className="min-w-0 break-words">{value || <span className="text-muted-foreground">—</span>}</dd>
     </div>
+  )
+}
+
+/** The supplier's share of the marketplace markup, paid on top of their own price. */
+function ShareCard({ supplier, onSaved }: { supplier: AdminSupplier; onSaved: (s: AdminSupplier) => void }) {
+  const [value, setValue] = useState(String(Number(supplier.markup_share_percent)))
+  const [busy, run] = useBusy()
+  const n = Number(value)
+  const valid = value.trim() !== '' && n >= 0 && n <= 100
+  const changed = valid && n !== Number(supplier.markup_share_percent)
+  return (
+    <form className="surface p-5" onSubmit={(e) => {
+      e.preventDefault()
+      run(async () => {
+        try {
+          onSaved(await patch<AdminSupplier>(`/admin/suppliers/${supplier.id}/`, { markup_share_percent: value }))
+          toast.success('Supplier share saved. It applies to new orders.')
+        } catch (err) { toast.error((err as Error).message) }
+      })
+    }}>
+      <h2 className="mb-1 font-semibold">Share of markup</h2>
+      <p className="mb-3 text-sm text-muted-foreground">
+        Paid to this supplier on top of their price for every unit sold, as a % of their price. It never exceeds the
+        category's markup, and orders already placed keep the share they were placed with.
+      </p>
+      <div className="flex items-center gap-2">
+        <Input className="w-28" type="number" min="0" max="100" step="0.01" inputMode="decimal" aria-label="Share of markup (%)"
+          value={value} onChange={(e) => setValue(e.target.value)} />
+        <span className="text-sm text-muted-foreground">%</span>
+        <Button type="submit" size="sm" disabled={busy || !changed}>Save</Button>
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">
+        {valid
+          ? `Example: their price KES 1,000 in a 20% category. Customer pays 1,200; supplier gets ${(1000 + 10 * Math.min(n, 20)).toLocaleString()}; Axe keeps ${(200 - 10 * Math.min(n, 20)).toLocaleString()}.`
+          : 'Enter a percentage from 0 to 100.'}
+      </p>
+    </form>
   )
 }
 
@@ -135,6 +173,7 @@ export default function SupplierDetail() {
         </section>
 
         <section className="grid content-start gap-6">
+          <ShareCard supplier={s} onSaved={(next) => qc.setQueryData(['admin', 'supplier', id], next)} />
           <div className="surface p-5">
             <h2 className="mb-2 font-semibold">Listings</h2>
             <div className="flex flex-wrap gap-2">

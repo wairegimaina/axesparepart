@@ -187,7 +187,7 @@ class SupplierItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem
         fields = ["id", "listing", "product_name", "part_number", "brand_name", "condition", "sku", "warranty",
-                  "on_request", "quantity", "supplier_unit_price", "supplier_line_total", "status"]
+                  "on_request", "quantity", "supplier_unit_price", "supplier_share", "supplier_line_total", "status"]
 
 
 class SupplierOrderListSerializer(serializers.ModelSerializer):
@@ -237,7 +237,7 @@ class AdminItemSerializer(serializers.ModelSerializer):
         model = OrderItem
         fields = ["id", "listing", "product_id", "product_name", "product_slug", "part_number", "brand_name",
                   "condition", "sku", "on_request", "quantity", "unit_price", "line_total", "supplier_unit_price",
-                  "supplier_line_total", "status", "stock_reserved"]
+                  "supplier_share", "supplier_line_total", "status", "stock_reserved"]
 
 
 class AdminSupplierOrderSerializer(serializers.ModelSerializer):

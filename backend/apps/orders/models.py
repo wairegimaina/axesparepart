@@ -181,7 +181,10 @@ class OrderItem(models.Model):
 
     quantity = models.PositiveIntegerField()
     unit_price = models.DecimalField(max_digits=12, decimal_places=2, help_text="Customer price")
-    supplier_unit_price = models.DecimalField(max_digits=12, decimal_places=2)
+    supplier_unit_price = models.DecimalField(
+        max_digits=12, decimal_places=2, help_text="What the supplier is paid per unit, including their markup share.")
+    supplier_share = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0, help_text="Markup share included in supplier_unit_price, per unit.")
     stock_reserved = models.BooleanField(default=False)
 
     class Meta:

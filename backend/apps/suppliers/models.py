@@ -1,4 +1,7 @@
+from decimal import Decimal
+
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 from django.utils.text import slugify
@@ -73,6 +76,11 @@ class Supplier(TimeStampedModel):
     payout_details = models.TextField(blank=True, help_text="Bank name, account name and number we pay you to.")
 
     # Marketplace control
+    markup_share_percent = models.DecimalField(
+        max_digits=5, decimal_places=2, default=Decimal("0"),
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
+        help_text="Part of the markup paid to this supplier, as a % of their price (never more than the markup).",
+    )
     status = models.CharField(max_length=12, choices=Status.choices, default=Status.PENDING, db_index=True)
     status_reason = models.TextField(blank=True)
     is_verified = models.BooleanField(default=False, help_text="Shows the Verified Supplier badge.")
