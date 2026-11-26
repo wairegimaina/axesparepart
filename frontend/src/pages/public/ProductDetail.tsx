@@ -14,6 +14,7 @@ import { get } from '@/lib/api'
 import { AVAILABILITY_LABEL, CONDITION_LABEL, date, money } from '@/lib/format'
 import type { Offer, ProductDetail as Detail } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { usePageMeta } from '@/hooks/usePageMeta'
 
 function AddToCart({ offer, productName }: { offer: Offer; productName: string }) {
   const add = useCart((s) => s.add)
@@ -41,9 +42,39 @@ function AddToCart({ offer, productName }: { offer: Offer; productName: string }
   )
 }
 
+/** schema.org Product data, so Google can show the price and availability in search results. */
+function productSchema(p: Detail) {
+  const prices = p.offers.map((o) => Number(o.price))
+  const image = [...p.images, ...p.offers.flatMap((o) => o.images)].map((i) => i.url)
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: p.name,
+    sku: p.part_number || undefined,
+    mpn: p.part_number || undefined,
+    brand: { '@type': 'Brand', name: p.brand.name },
+    category: p.category.name,
+    description: p.description || undefined,
+    image: image.length ? image : undefined,
+    offers: prices.length ? {
+      '@type': 'AggregateOffer',
+      priceCurrency: 'KES',
+      lowPrice: Math.min(...prices),
+      highPrice: Math.max(...prices),
+      offerCount: prices.length,
+      availability: p.offers.some((o) => o.in_stock) ? 'https://schema.org/InStock' : 'https://schema.org/PreOrder',
+    } : undefined,
+  }
+}
+
 export default function ProductDetail() {
   const { slug } = useParams()
   const { data: p, isLoading, error } = useQuery({ queryKey: ['product', slug], queryFn: () => get<Detail>(`/products/${slug}/`) })
+  usePageMeta(
+    p ? [p.name, p.brand.name, p.part_number].filter(Boolean).join(' · ') : undefined,
+    p ? `${p.name} by ${p.brand.name}${p.part_number ? ` (part no. ${p.part_number})` : ''}. ${p.description || `Buy ${p.category.name.toLowerCase()} online from Axe Spare Parts, delivered across Kenya.`}` : undefined,
+    p ? productSchema(p) : undefined,
+  )
 
   if (isLoading) return <Loading />
   if (error || !p)

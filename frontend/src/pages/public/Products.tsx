@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { usePageMeta } from '@/hooks/usePageMeta'
 import { Check, ChevronDown, SlidersHorizontal, X } from 'lucide-react'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -284,6 +285,7 @@ function OtherFilters({ filters, set, brands, chips }: PanelProps & { chips?: bo
 }
 
 export default function Products() {
+  usePageMeta('Spare parts', 'Browse motorcycle spare parts by category, brand and bike model: engine, brakes, electrics, tyres and more, delivered across Kenya.')
   return (
     <div className="mx-auto max-w-screen-2xl px-4 py-8 sm:px-6 lg:px-8">
       <h1 className="mb-6 text-2xl font-semibold tracking-tight">Spare parts</h1>

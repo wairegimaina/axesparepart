@@ -8,6 +8,7 @@ from rest_framework.routers import DefaultRouter
 
 from apps.accounts import views as accounts
 from apps.catalogue import views as catalogue
+from apps.core import seo
 from apps.core import views as core
 from apps.deliveries import views as deliveries
 from apps.inventory import views as inventory
@@ -82,6 +83,8 @@ admin_urls = [
 urlpatterns = [
     path("django-admin/", admin.site.urls),
     path("healthz", lambda r: JsonResponse({"ok": True})),
+    path("robots.txt", seo.robots_txt),
+    path("sitemap.xml", seo.sitemap_xml),
     path("api/auth/", include("apps.accounts.urls")),
     path("api/config/", core.PublicConfigView.as_view()),
     path("api/categories/", catalogue.CategoryTreeView.as_view()),
