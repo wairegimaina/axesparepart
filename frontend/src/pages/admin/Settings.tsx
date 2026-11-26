@@ -8,6 +8,7 @@ import { get, patch } from '@/lib/api'
 import { applyApiErrors } from '@/lib/forms'
 import { dateTime } from '@/lib/format'
 import { DeliveryRates } from './DeliveryRates'
+import { PricingRules } from './PricingRules'
 
 interface MarketSettings {
   default_markup_percent: string
@@ -60,7 +61,7 @@ export default function Settings() {
         <section className="grid gap-5 surface p-5 sm:grid-cols-2">
           <h2 className="font-semibold sm:col-span-2">Pricing & stock</h2>
           <Field label="Default markup (%)" htmlFor="markup" error={e.default_markup_percent?.message}
-            hint={`A KES 1,000 part sells for KES ${Math.round(1000 * (1 + markup / 100)).toLocaleString()}. Categories can set their own (Catalogue → Product categories).`}>
+            hint={`A KES 1,000 part sells for KES ${Math.round(1000 * (1 + markup / 100)).toLocaleString()}. Categories can set their own below.`}>
             <Input id="markup" type="number" step="0.01" min="0" {...form.register('default_markup_percent')} />
           </Field>
           <Field label="Default low-stock alert" htmlFor="low" error={e.default_low_stock_threshold?.message} >
@@ -94,6 +95,7 @@ export default function Settings() {
         </section>
         <div><Button type="submit" disabled={form.formState.isSubmitting || !form.formState.isDirty}>Save settings</Button></div>
       </form>
+      <div className="mt-6"><PricingRules defaultMarkup={q.data.default_markup_percent} /></div>
       <div className="mt-6"><DeliveryRates standardFee={q.data.delivery_fee} /></div>
     </>
   )
