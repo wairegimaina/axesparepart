@@ -120,10 +120,14 @@ class SupplierListing(TimeStampedModel):
 
         The supplier's share % (Admin → Suppliers) is a percentage of their price, capped at the
         category's markup, and never more than the customer actually pays above their price
-        (an admin price override or an offer can leave less room).
+        (an admin price override or an offer can leave less room). Parts whose markup is below
+        the minimum in Settings pay no share at all.
         """
         markups = as_markups(markups)
-        pct = min(self.supplier.markup_share_percent, self.markup_percent(markups))
+        markup = self.markup_percent(markups)
+        if markup < markups.share_min:
+            return Decimal("0.00")
+        pct = min(self.supplier.markup_share_percent, markup)
         if pct <= 0:
             return Decimal("0.00")
         base = self.current_supplier_price

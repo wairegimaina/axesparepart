@@ -23,6 +23,11 @@ class MarketplaceSettings(models.Model):
         validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("500"))],
         help_text="Added to the supplier price to get the customer price, unless an admin overrides it.",
     )
+    share_min_markup_percent = models.DecimalField(
+        max_digits=5, decimal_places=2, default=Decimal("5.00"),
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("500"))],
+        help_text="Suppliers get no share of the markup on parts whose markup is below this. 0 = always share.",
+    )
     default_low_stock_threshold = models.PositiveIntegerField(default=5)
     currency = models.CharField(max_length=3, default="KES")
     delivery_fee = models.DecimalField(

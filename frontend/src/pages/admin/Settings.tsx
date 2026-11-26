@@ -12,6 +12,7 @@ import { PricingRules } from './PricingRules'
 
 interface MarketSettings {
   default_markup_percent: string
+  share_min_markup_percent: string
   default_low_stock_threshold: number
   currency: string
   delivery_fee: string
@@ -31,7 +32,7 @@ export default function Settings() {
   const q = useQuery({ queryKey: ['admin', 'settings'], queryFn: () => get<MarketSettings>('/admin/settings/') })
   const form = useForm<FormValues>({
     values: q.data ? {
-      default_markup_percent: q.data.default_markup_percent, default_low_stock_threshold: String(q.data.default_low_stock_threshold),
+      default_markup_percent: q.data.default_markup_percent, share_min_markup_percent: q.data.share_min_markup_percent, default_low_stock_threshold: String(q.data.default_low_stock_threshold),
       delivery_fee: q.data.delivery_fee, free_delivery_threshold: q.data.free_delivery_threshold,
       support_phone: q.data.support_phone, support_whatsapp: q.data.support_whatsapp,
       support_email: q.data.support_email, support_hours: q.data.support_hours,
@@ -64,6 +65,10 @@ export default function Settings() {
             hint={`A KES 1,000 part sells for KES ${Math.round(1000 * (1 + markup / 100)).toLocaleString()}. Categories can set their own below.`}>
             <Input id="markup" type="number" step="0.01" min="0" {...form.register('default_markup_percent')} />
           </Field>
+          <Field label="Supplier share only from markup of (%)" htmlFor="share-min" error={e.share_min_markup_percent?.message}
+            hint={`On parts with a lower markup, suppliers get no share and Axe keeps it all. 0 = always share.`}>
+            <Input id="share-min" type="number" step="0.5" min="0" {...form.register('share_min_markup_percent')} />
+          </Field>
           <Field label="Default low-stock alert" htmlFor="low" error={e.default_low_stock_threshold?.message} >
             <Input id="low" type="number" min="0" {...form.register('default_low_stock_threshold')} />
           </Field>
@@ -95,7 +100,7 @@ export default function Settings() {
         </section>
         <div><Button type="submit" disabled={form.formState.isSubmitting || !form.formState.isDirty}>Save settings</Button></div>
       </form>
-      <div className="mt-6"><PricingRules defaultMarkup={q.data.default_markup_percent} /></div>
+      <div className="mt-6"><PricingRules defaultMarkup={q.data.default_markup_percent} shareMin={q.data.share_min_markup_percent} /></div>
       <div className="mt-6"><DeliveryRates standardFee={q.data.delivery_fee} /></div>
     </>
   )

@@ -7,7 +7,7 @@ class MarketplaceSettingsSerializer(serializers.ModelSerializer):
     class Meta:
         model = MarketplaceSettings
         fields = [
-            "default_markup_percent", "default_low_stock_threshold", "currency", "delivery_fee",
+            "default_markup_percent", "share_min_markup_percent", "default_low_stock_threshold", "currency", "delivery_fee",
             "free_delivery_threshold", "cash_on_delivery_enabled",
             "support_phone", "support_whatsapp", "support_email", "support_hours",
             "google_client_id",

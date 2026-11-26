@@ -105,6 +105,21 @@ class CategoryMarkupAndSupplierShareTests(TestCase):
         self.piston.save()
         self.assertEqual(self.piston.supplier_payout(), Decimal("1000"))  # never below their own price
 
+    def test_no_share_on_parts_whose_markup_is_below_the_minimum(self):
+        self.tyres.markup_percent = Decimal("2")
+        self.tyres.save()
+        item = self.order(self.tyre)  # 2% < 5% minimum: Axe keeps the whole 20
+        self.assertEqual((item.unit_price, item.supplier_unit_price, item.supplier_share),
+                         (Decimal("1020"), Decimal("1000.00"), Decimal("0.00")))
+        self.tyres.markup_percent = Decimal("5")
+        self.tyres.save()
+        self.assertEqual(self.tyre.supplier_share(), Decimal("50.00"))  # at the minimum, the share applies
+        r = client(self.admin).patch("/api/admin/settings/", {"share_min_markup_percent": "0"}, format="json")
+        self.assertEqual(r.status_code, 200, r.content)
+        self.tyres.markup_percent = Decimal("2")
+        self.tyres.save()
+        self.assertEqual(self.tyre.supplier_share(), Decimal("20.00"))  # 0 = always share
+
     def test_supplier_sees_what_they_receive_but_cannot_change_their_share(self):
         listings = {x["product"]["name"]: x for x in client(self.owner).get("/api/supplier/listings/").json()["results"]}
         self.assertEqual((listings["Ring set"]["markup_share"], listings["Ring set"]["you_receive"]), ("50.00", "1050.00"))

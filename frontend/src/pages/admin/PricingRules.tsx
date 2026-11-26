@@ -15,14 +15,14 @@ interface SupplierRow { id: number; name: string; status: string; markup_share_p
 const pct = (n: number) => `${Number(n.toFixed(2))}%`
 
 /** Same maths as SupplierListing.regular_price / supplier_share on the server. */
-function split(price: number, markup: number, share: number) {
+function split(price: number, markup: number, share: number, shareMin: number) {
   const customer = Math.round(price * (1 + markup / 100))
-  const supplierShare = Math.max(0, Math.min(Math.round(price * Math.min(share, markup)) / 100, customer - price))
+  const supplierShare = markup < shareMin ? 0 : Math.max(0, Math.min(Math.round(price * Math.min(share, markup)) / 100, customer - price))
   return { customer, supplierShare, supplier: price + supplierShare, keep: customer - price - supplierShare }
 }
 
 /** Markup per category and each supplier's share of it, with a worked example. */
-export function PricingRules({ defaultMarkup }: { defaultMarkup: string }) {
+export function PricingRules({ defaultMarkup, shareMin }: { defaultMarkup: string; shareMin: string }) {
   const qc = useQueryClient()
   const cats = useQuery({ queryKey: ['admin', 'categories'], queryFn: () => get<Category[]>('/admin/categories/') })
   const sups = useQuery({
@@ -75,12 +75,13 @@ export function PricingRules({ defaultMarkup }: { defaultMarkup: string }) {
   const p = Math.max(0, Number(price) || 0)
   const sh = Math.max(0, Number(share) || 0)
   const def = Number(defaultMarkup)
-  const defSplit = split(p, def, sh)
+  const min = Number(shareMin)
+  const defSplit = split(p, def, sh, min)
 
   const renderRow = (c: Category, child: boolean) => {
     const m = Number(c.effective_markup_percent ?? def)
     const own = c.markup_percent != null
-    const r = split(p, m, sh)
+    const r = split(p, m, sh, min)
     const inheritLabel = c.parent ? 'parent' : 'default'
     return (
       <TableRow key={c.id} className={c.is_active ? '' : 'opacity-60'}>
@@ -102,7 +103,10 @@ export function PricingRules({ defaultMarkup }: { defaultMarkup: string }) {
           </div>
         </TableCell>
         <TableCell className="text-right tabular-nums">{money(r.customer)}</TableCell>
-        <TableCell className="text-right tabular-nums">{money(r.supplier)}</TableCell>
+        <TableCell className="text-right tabular-nums">
+          {money(r.supplier)}
+          {m < min && <span className="block text-xs text-muted-foreground">no share (under {pct(min)})</span>}
+        </TableCell>
         <TableCell className={`text-right font-semibold tabular-nums ${r.keep <= 0 ? 'text-red-600' : 'text-emerald-700 dark:text-emerald-400'}`}>
           {r.keep <= 0 && p > 0 && <AlertTriangle className="mr-1 inline size-3.5" aria-label="Nothing left for the marketplace" />}
           {money(r.keep)}
@@ -111,7 +115,7 @@ export function PricingRules({ defaultMarkup }: { defaultMarkup: string }) {
     )
   }
 
-  const zeroKeep = ordered.filter((c) => c.is_active && split(p, Number(c.effective_markup_percent ?? def), sh).keep <= 0 && p > 0)
+  const zeroKeep = ordered.filter((c) => c.is_active && split(p, Number(c.effective_markup_percent ?? def), sh, min).keep <= 0 && p > 0)
 
   return (
     <section className="grid max-w-4xl gap-5 surface p-5">
@@ -119,7 +123,7 @@ export function PricingRules({ defaultMarkup }: { defaultMarkup: string }) {
         <h2 className="font-semibold">Markup by category</h2>
         <p className="text-sm text-muted-foreground">
           Customers pay the supplier's price plus the category's markup. The supplier's share is paid out of that markup;
-          the rest is what Axe keeps. Leave a category empty to use its parent's markup, or the default ({pct(def)}).
+          the rest is what Axe keeps. {min > 0 && <>Below {pct(min)} markup suppliers get no share. </>}Leave a category empty to use its parent's markup, or the default ({pct(def)}).
           Changes save when you leave the box. For one specific item, set its price under Product approvals.
         </p>
       </div>
@@ -169,7 +173,8 @@ export function PricingRules({ defaultMarkup }: { defaultMarkup: string }) {
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-red-600" />
           <span>
             With a {pct(sh)} supplier share, Axe keeps nothing on {zeroKeep.map((c) => c.name).join(', ')}: the share can't be more
-            than the markup, so the supplier takes all of it. Raise the markup there or lower the share.
+            than the markup, so the supplier takes all of it. Raise the markup there, lower the share, or raise "Supplier share
+            only from markup of" above.
           </span>
         </p>
       )}
@@ -179,6 +184,7 @@ export function PricingRules({ defaultMarkup }: { defaultMarkup: string }) {
           <h3 className="font-semibold">Supplier shares</h3>
           <p className="text-sm text-muted-foreground">
             Paid to the supplier on top of their price, as a % of their price, and never more than the markup on the item.
+            {min > 0 && ` Nothing is paid on parts with a markup under ${pct(min)}.`}
             Orders already placed keep the share they were placed with.
           </p>
         </div>
@@ -192,7 +198,7 @@ export function PricingRules({ defaultMarkup }: { defaultMarkup: string }) {
               </TableHeader>
               <TableBody>
                 {sups.data.results.map((s) => {
-                  const r = split(p, def, Number(s.markup_share_percent))
+                  const r = split(p, def, Number(s.markup_share_percent), min)
                   return (
                     <TableRow key={s.id}>
                       <TableCell>

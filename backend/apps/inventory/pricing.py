@@ -15,13 +15,16 @@ class Markups:
     default: Decimal
     # Effective markup for every category whose markup differs from the default.
     by_category: dict[int, Decimal] = field(default_factory=dict)
+    # Below this markup the supplier gets no share; the marketplace keeps the whole markup.
+    share_min: Decimal = Decimal("0")
 
     @classmethod
     def load(cls) -> "Markups":
         from apps.catalogue.models import Category
         from apps.core.models import MarketplaceSettings
 
-        default = MarketplaceSettings.load().default_markup_percent
+        settings = MarketplaceSettings.load()
+        default = settings.default_markup_percent
         rows = {c["id"]: (c["parent_id"], c["markup_percent"])
                 for c in Category.objects.values("id", "parent_id", "markup_percent")}
         effective: dict[int, Decimal] = {}
@@ -39,7 +42,8 @@ class Markups:
 
         for cid in rows:
             resolve(cid)
-        return cls(default, {cid: pct for cid, pct in effective.items() if pct != default})
+        return cls(default, {cid: pct for cid, pct in effective.items() if pct != default},
+                   share_min=settings.share_min_markup_percent)
 
     def for_category(self, category_id: int | None) -> Decimal:
         return self.by_category.get(category_id, self.default)
