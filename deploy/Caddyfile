@@ -1,0 +1,38 @@
+# SITE_ADDRESS is the public hostname, e.g. axespareparts.co.ke or 51-68-1-2.sslip.io.
+# Caddy gets and renews the HTTPS certificate for it automatically.
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	request_body {
+		max_size 25MB
+	}
+
+	header {
+		-Server
+		Strict-Transport-Security "max-age=2592000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+
+	# Django: the API, its admin, its static files and the health check.
+	@backend path /api/* /django-admin/* /static/* /healthz
+	handle @backend {
+		reverse_proxy api:8000
+	}
+
+	# Everything else is the React app.
+	handle {
+		root * /srv
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		@html path / /index.html
+		header @html Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+# www.axespareparts.com -> axespareparts.com
+www.{$SITE_ADDRESS} {
+	redir https://{$SITE_ADDRESS}{uri} permanent
+}

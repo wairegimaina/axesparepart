@@ -21,3 +21,7 @@ backend/.dev-test-staff
 backend/.dev-logins
 backend/.models/
 backend/.env.render
+
+# Production (docker-compose.yml)
+/.env
+/backups/

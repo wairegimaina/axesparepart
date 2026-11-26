@@ -1,0 +1,11 @@
+.venv
+.env
+.env.*
+!.env.example
+.models
+media
+private_media
+staticfiles
+**/__pycache__
+**/*.pyc
+.dev-*

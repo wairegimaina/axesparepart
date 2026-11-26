@@ -1,0 +1,8 @@
+# Context for deploy/Caddy.Dockerfile (repo root). Only frontend/ and deploy/ are needed.
+.git
+.env
+backend
+frontend/node_modules
+frontend/dist
+**/*.tsbuildinfo
+backups
