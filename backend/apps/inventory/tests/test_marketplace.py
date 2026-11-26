@@ -270,6 +270,24 @@ class AuthTests(TestCase):
         c.force_authenticate(customer)
         self.assertEqual(c.post("/api/admin/suppliers/", body, format="json").status_code, 403)
 
+    def test_customer_email_can_become_a_supplier_owner(self):
+        admin = User.objects.create_superuser(email="ad@m.ke", password="Strong-pass-2026", full_name="Admin")
+        cust = User.objects.create_user(email="moto@parts.ke", password="Strong-pass-2026", full_name="Moto Owner")
+        c = APIClient()
+        c.force_authenticate(admin)
+        body = {"company_name": "Moto Spares", "business_phone": "+254722000001", "county": "Nairobi",
+                "owner_name": "Ignored", "owner_email": "MOTO@parts.ke"}
+        r = c.post("/api/admin/suppliers/", body, format="json")
+        self.assertEqual(r.status_code, 201, r.content)
+        cust.refresh_from_db()
+        self.assertEqual((cust.role, cust.full_name, cust.supplier_membership.role), ("supplier", "Moto Owner", "owner"))
+        self.assertTrue(cust.check_password("Strong-pass-2026"))  # keeps their password
+        self.assertEqual(User.objects.filter(email__iexact="moto@parts.ke").count(), 1)
+        # Now a supplier login: can't start a second company, or be invited to another team.
+        body["company_name"] = "Second Co"
+        self.assertEqual(c.post("/api/admin/suppliers/", body, format="json").status_code, 400)
+        self.assertEqual(c.post("/api/admin/suppliers/", {**body, "owner_email": "ad@m.ke"}, format="json").status_code, 400)
+
     def test_login_requires_csrf(self):
         User.objects.create_user(email="a@b.ke", password="Strong-pass-2026", full_name="A")
         c = APIClient(enforce_csrf_checks=True)

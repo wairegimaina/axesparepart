@@ -100,10 +100,35 @@ class MemberInviteSerializer(serializers.Serializer):
     role = serializers.ChoiceField(choices=[r for r in SupplierMember.Role.choices if r[0] != "owner"])
 
     def validate_email(self, value):
-        value = value.lower()
-        if User.objects.filter(email__iexact=value).exists():
-            raise serializers.ValidationError("This email already has an account on the marketplace.")
-        return value
+        return check_free_for_supplier(value)
+
+
+def check_free_for_supplier(email: str) -> str:
+    """An email can join a supplier if it's new, or belongs to a customer account (which then becomes a supplier login)."""
+    email = email.lower()
+    user = User.objects.filter(email__iexact=email).first()
+    if user is not None and (user.role != User.Role.CUSTOMER or hasattr(user, "supplier_membership")):
+        raise serializers.ValidationError("This email is already used by a supplier or admin account.")
+    return email
+
+
+def supplier_login(email: str, full_name: str, phone: str = ""):
+    """The login for a new supplier member: a fresh account, or an existing customer account switched over.
+
+    A switched account keeps its password and order history; it signs in to the supplier portal from now on.
+    """
+    user = User.objects.filter(email__iexact=email, role=User.Role.CUSTOMER).first()
+    if user is None:
+        user = User.objects.create_user(email=email, full_name=full_name, phone=phone, role=User.Role.SUPPLIER)
+        user.set_unusable_password()
+        user.save(update_fields=["password"])
+        return user, False
+    user.role = User.Role.SUPPLIER
+    user.is_active = True
+    user.full_name = user.full_name or full_name
+    user.phone = user.phone or phone
+    user.save(update_fields=["role", "is_active", "full_name", "phone"])
+    return user, True
 
 
 class AdminSupplierCreateSerializer(serializers.Serializer):
@@ -124,10 +149,7 @@ class AdminSupplierCreateSerializer(serializers.Serializer):
     owner_phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
 
     def validate_owner_email(self, value):
-        value = value.lower()
-        if User.objects.filter(email__iexact=value).exists():
-            raise serializers.ValidationError("This email already has an account on the marketplace.")
-        return value
+        return check_free_for_supplier(value)
 
 
 class AdminSupplierSerializer(SupplierProfileSerializer):

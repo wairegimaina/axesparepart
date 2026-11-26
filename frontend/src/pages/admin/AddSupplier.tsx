@@ -30,8 +30,8 @@ export function AddSupplierButton() {
   const counties = useCounties()
   const types = useQuery({ queryKey: ['business-categories'], queryFn: () => get<BusinessCategory[]>('/business-categories/'), enabled: open })
   const set = (k: keyof typeof blank) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm({ ...form, [k]: e.target.value })
-  const text = (k: keyof typeof blank, label: string, opts: { required?: boolean; type?: string; placeholder?: string; wide?: boolean } = {}) => (
-    <Field label={label} htmlFor={`ns-${k}`} required={opts.required} error={errors[k]} className={opts.wide ? 'sm:col-span-2' : undefined}>
+  const text = (k: keyof typeof blank, label: string, opts: { required?: boolean; type?: string; placeholder?: string; wide?: boolean; hint?: string } = {}) => (
+    <Field label={label} htmlFor={`ns-${k}`} required={opts.required} error={errors[k]} hint={opts.hint} className={opts.wide ? 'sm:col-span-2' : undefined}>
       <Input id={`ns-${k}`} type={opts.type} placeholder={opts.placeholder} value={form[k] as string} onChange={set(k)} />
     </Field>
   )
@@ -98,7 +98,7 @@ export function AddSupplierButton() {
               <legend className="mb-2 text-sm font-semibold">Owner login</legend>
               {text('owner_name', 'Full name', { required: true })}
               {text('owner_phone', 'Phone', { type: 'tel', placeholder: '+254…' })}
-              {text('owner_email', 'Email', { required: true, type: 'email', wide: true })}
+              {text('owner_email', 'Email', { required: true, type: 'email', wide: true, hint: 'If a customer already signed up with this email, their account becomes the supplier login. They keep their password.' })}
             </fieldset>
           </form>
           <DialogFooter>

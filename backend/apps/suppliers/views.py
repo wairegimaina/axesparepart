@@ -20,7 +20,7 @@ from apps.notifications.service import notify_admins, notify_supplier
 
 from .models import BusinessCategory, Supplier, SupplierDocument, SupplierMember
 from .serializers import (
-    AdminSupplierCreateSerializer, AdminSupplierListSerializer, AdminSupplierSerializer, BusinessCategorySerializer, DocumentReviewSerializer,
+    AdminSupplierCreateSerializer, AdminSupplierListSerializer, supplier_login, AdminSupplierSerializer, BusinessCategorySerializer, DocumentReviewSerializer,
     MemberInviteSerializer, MemberSerializer, SupplierDocumentSerializer,
     SupplierProfileSerializer, StatusChangeSerializer,
 )
@@ -152,11 +152,7 @@ class SupplierMemberViewSet(viewsets.ModelViewSet):
         s = MemberInviteSerializer(data=request.data)
         s.is_valid(raise_exception=True)
         with transaction.atomic():
-            user = User.objects.create_user(
-                email=s.validated_data["email"], full_name=s.validated_data["full_name"], role=User.Role.SUPPLIER,
-            )
-            user.set_unusable_password()
-            user.save(update_fields=["password"])
+            user, _ = supplier_login(s.validated_data["email"], s.validated_data["full_name"])
             member = SupplierMember.objects.create(supplier=request.supplier, user=user, role=s.validated_data["role"])
         send_invite(user, request.supplier.name, request.user.full_name)
         return Response(MemberSerializer(member).data, status=status.HTTP_201_CREATED)
@@ -206,10 +202,7 @@ class AdminSupplierViewSet(viewsets.ModelViewSet):
         s.is_valid(raise_exception=True)
         d = s.validated_data
         with transaction.atomic():
-            owner = User.objects.create_user(email=d["owner_email"], full_name=d["owner_name"],
-                                             phone=d.get("owner_phone", ""), role=User.Role.SUPPLIER)
-            owner.set_unusable_password()
-            owner.save(update_fields=["password"])
+            owner, was_customer = supplier_login(d["owner_email"], d["owner_name"], d.get("owner_phone", ""))
             supplier = Supplier.objects.create(
                 name=d["company_name"], business_phone=d["business_phone"],
                 business_email=d.get("business_email") or d["owner_email"], county=d["county"],
@@ -219,7 +212,7 @@ class AdminSupplierViewSet(viewsets.ModelViewSet):
             )
             supplier.business_categories.set(d.get("business_category_ids", []))
             SupplierMember.objects.create(supplier=supplier, user=owner, role=R.OWNER)
-            audit(request, "supplier.onboarded", supplier, owner=owner.email)
+            audit(request, "supplier.onboarded", supplier, owner=owner.email, was_customer=was_customer)
         send_invite(owner, supplier.name, request.user.full_name)
         return Response(AdminSupplierSerializer(self.get_queryset().get(pk=supplier.pk)).data,
                         status=status.HTTP_201_CREATED)
