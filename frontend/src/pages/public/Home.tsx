@@ -37,20 +37,23 @@ export default function Home() {
     <>
       {/* Hero: an off-road photo under a navy fade. Phones: photo on top, text below. Desktop: text left, wheel right. */}
       <section id="home-hero" className="relative overflow-hidden bg-brand text-brand-foreground">
-        <img
-          src={heroLarge}
-          srcSet={`${heroSmall} 960w, ${heroLarge} 1920w`}
-          sizes="100vw"
-          alt=""
-          aria-hidden
-          fetchPriority="high"
-          className="absolute inset-x-0 top-0 h-[330px] w-full object-cover object-[78%_40%] saturate-[1.1] contrast-[1.08] md:inset-0 md:h-full md:object-[75%_50%]"
-        />
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-[330px] bg-[#0b2a8a] opacity-20 mix-blend-color md:inset-0 md:h-full" aria-hidden />
-        {/* Phones: fade the photo down into navy so the headline sits on solid colour. */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-[332px] bg-[linear-gradient(180deg,rgb(11_27_63/0.2)_0%,transparent_35%,rgb(11_27_63/0.7)_75%,var(--brand)_100%)] md:hidden" aria-hidden />
-        {/* Desktop: navy behind the text on the left, the wheel clear on the right, a blue glow from the corner. */}
-        <div className="pointer-events-none absolute inset-0 hidden bg-[linear-gradient(90deg,var(--brand)_0%,rgb(11_27_63/0.95)_30%,rgb(11_27_63/0.55)_52%,transparent_78%)] md:block" aria-hidden />
+        {/* The photo covers only the right side on desktop (the text side is solid navy anyway), so it is
+            stretched far less on wide screens and stays sharp. */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[330px] md:inset-y-0 md:right-0 md:left-auto md:h-full md:w-[62%] xl:w-[58%]" aria-hidden>
+          <img
+            src={heroLarge}
+            srcSet={`${heroSmall} 960w, ${heroLarge} 1920w`}
+            sizes="(min-width: 768px) 62vw, 100vw"
+            alt=""
+            fetchPriority="high"
+            className="h-full w-full object-cover object-[78%_40%] saturate-[1.1] contrast-[1.08] md:object-[70%_50%]"
+          />
+          <div className="absolute inset-0 bg-[#0b2a8a] opacity-20 mix-blend-color" />
+          {/* Phones: fade the photo down into navy so the headline sits on solid colour. */}
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgb(11_27_63/0.2)_0%,transparent_35%,rgb(11_27_63/0.7)_75%,var(--brand)_101%)] md:hidden" />
+          {/* Desktop: fade the photo's left edge into the navy behind the text. */}
+          <div className="absolute inset-0 hidden bg-[linear-gradient(90deg,var(--brand)_0%,rgb(11_27_63/0.75)_22%,rgb(11_27_63/0.2)_50%,transparent_75%)] md:block" />
+        </div>
         <div className="pointer-events-none absolute inset-0 hidden bg-[radial-gradient(ellipse_50%_65%_at_100%_100%,rgb(29_79_216/0.5),transparent_70%)] md:block" aria-hidden />
         <div className="pointer-events-none absolute inset-0 hidden shadow-[inset_0_-120px_120px_-40px_rgb(11_27_63/0.9),inset_0_0_160px_rgb(5_12_30/0.5)] md:block" aria-hidden />
 
