@@ -28,25 +28,27 @@ export function ProductCard({ product: p }: { product: Card }) {
       {/* Whole card opens the product; the cart button sits above this link. */}
       <Link to={href} className="absolute inset-0 z-0" aria-label={p.name} />
 
+      {/* The photo fills the card edge to edge as a square, so every card in a grid matches. */}
       <div className={cn(
-        'relative m-2 mb-0 flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl',
-        p.image ? 'bg-[radial-gradient(circle_at_50%_40%,var(--card),var(--secondary))]' : 'bg-brand text-brand-foreground',
+        'relative flex aspect-square items-center justify-center overflow-hidden',
+        p.image ? 'bg-secondary' : 'bg-brand text-brand-foreground',
       )}>
         {p.image ? (
-          <img src={p.image} alt="" loading="lazy" className="h-full w-full object-contain p-4 mix-blend-multiply dark:mix-blend-normal transition duration-300 group-hover:scale-105" />
+          <img src={p.image} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105" />
         ) : (
           // No photo yet: a branded tile, so it never looks like it's still loading.
           <NoPhoto brand={p.brand.name} type={p.category.name} />
         )}
-        <span className="absolute top-2 left-2 flex flex-col items-start gap-1">
-          {p.deal_percent && <span className="rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-bold text-white shadow-sm">−{p.deal_percent}%</span>}
-          {onlyCondition && <span className="rounded-full bg-highlight px-2 py-0.5 text-[11px] font-bold text-highlight-foreground">{onlyCondition}</span>}
+        <span className="absolute top-2 left-2 flex flex-wrap items-start gap-1 sm:top-2.5 sm:left-2.5">
+          {/* The no-photo tile already shows the brand in big letters. */}
+          {p.image && <span className="rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-extrabold tracking-wider text-primary uppercase shadow-sm sm:text-[11px]">{p.brand.name}</span>}
+          {p.deal_percent && <span className="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm sm:text-[11px]">−{p.deal_percent}%</span>}
+          {onlyCondition && <span className="rounded-full bg-highlight px-2 py-0.5 text-[10px] font-bold text-highlight-foreground sm:text-[11px]">{onlyCondition}</span>}
         </span>
       </div>
 
-      <div className="flex flex-1 flex-col p-3 pt-3 sm:p-4">
-        <p className="text-[11px] font-bold tracking-wider text-primary uppercase">{p.brand.name}</p>
-        <h3 className="mt-0.5 line-clamp-2 min-h-[2.6em] font-sans text-[15px] leading-snug font-semibold transition group-hover:text-primary">{p.name}</h3>
+      <div className="flex flex-1 flex-col p-3 sm:p-4">
+        <h3 className="line-clamp-2 min-h-[2.6em] font-sans text-[15px] leading-snug font-semibold transition group-hover:text-primary">{p.name}</h3>
         {p.part_number && <p className="mt-0.5 mb-3 truncate font-mono text-[11px] text-muted-foreground">{p.part_number}</p>}
         {fitsText && <p className="-mt-1 mb-3 flex items-center gap-1.5 truncate text-xs text-muted-foreground"><Bike className="size-3.5 shrink-0" /><span className="truncate">{fitsText}</span></p>}
 

@@ -1,5 +1,5 @@
 import { Search, ShoppingCart } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -54,9 +54,26 @@ function CartButton() {
   )
 }
 
+/** On the home page: true once the hero (and its big search box) has scrolled up under the header. */
+function usePastHero(onHome: boolean) {
+  const [past, setPast] = useState(false)
+  useEffect(() => {
+    if (!onHome) return
+    const check = () => {
+      const hero = document.getElementById('home-hero')
+      setPast(!!hero && hero.getBoundingClientRect().bottom < 64)
+    }
+    check()
+    window.addEventListener('scroll', check, { passive: true })
+    return () => window.removeEventListener('scroll', check)
+  }, [onHome])
+  return onHome && past
+}
+
 export function PublicLayout() {
-  // The home page has its own big search box, so skip the header's mobile one there.
+  // The home page has its own big search box, so the header's one waits until that has scrolled away.
   const onHome = useLocation().pathname === '/'
+  const pastHero = usePastHero(onHome)
   const { data: me } = useMe()
   const openAuth = useAuthDialog((st) => st.open)
   return (
@@ -69,7 +86,10 @@ export function PublicLayout() {
             <NavLink to="/brands" className={nav}>Brands</NavLink>
             <NavLink to="/help" className={nav}>Help</NavLink>
           </nav>
-          <SearchBox className="ml-auto hidden w-full max-w-md lg:block" />
+          <SearchBox className={cn(
+            'ml-auto hidden w-full max-w-md transition duration-300 lg:block',
+            onHome && !pastHero && 'pointer-events-none invisible -translate-y-1 opacity-0',
+          )} />
           <div className="ml-auto flex items-center gap-1 lg:ml-0">
             {me?.role === 'customer' && <NotificationBell base="/account" dark />}
             <CartButton />

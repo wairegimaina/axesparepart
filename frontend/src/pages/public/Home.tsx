@@ -1,17 +1,21 @@
 import { useQuery } from '@tanstack/react-query'
 import { usePageMeta } from '@/hooks/usePageMeta'
-import { ArrowRight, BadgeCheck, Bike, ChevronRight, LayoutGrid, ShieldCheck, Tag, Truck, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { ArrowRight, LayoutGrid, Tag, X } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { NoPhoto, ProductCard } from '@/components/ProductCard'
+import heroLarge from '@/assets/hero-offroad-1920.webp'
+import heroSmall from '@/assets/hero-offroad-960.webp'
+import { ProductCard } from '@/components/ProductCard'
 import { useBrands } from '@/pages/public/Brands'
 import { SearchBox } from '@/components/layout/PublicLayout'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { get } from '@/lib/api'
 import { categoryIcon } from '@/lib/categoryIcons'
-import { money } from '@/lib/format'
 import type { CategoryNode, Paginated, ProductCard as Card } from '@/lib/types'
+
+/** Quick searches under the hero search box. */
+const POPULAR = ['Brake pads', 'Boxer BM150', 'Chain & sprocket']
 
 export default function Home() {
   usePageMeta('')
@@ -26,61 +30,86 @@ export default function Home() {
     queryKey: ['products', 'deals'],
     queryFn: () => get<Paginated<Card>>('/products/?deals=1&sort=deal&page_size=8'),
   })
+  // The hero photo is a wheel, so its one link goes to that category when the shop has it.
+  const wheels = categories.data?.find((c) => /wheel|tyre|tire/i.test(c.name))
 
   return (
     <>
-      <section className="relative overflow-hidden bg-brand text-brand-foreground">
-        <div className="pointer-events-none absolute -top-32 right-[-10%] size-[36rem] rounded-full bg-primary/45 blur-3xl" />
-        {/* Diagonal speed stripes, echoing the client's artwork. */}
-        <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-1/2 md:block" aria-hidden>
-          <div className="absolute top-[-20%] right-[22%] h-[140%] w-10 rotate-[24deg] bg-primary/50" />
-          <div className="absolute top-[-20%] right-[8%] h-[140%] w-16 rotate-[24deg] bg-primary/25" />
-          <div className="absolute top-[-20%] right-[14%] h-[140%] w-4 rotate-[24deg] bg-highlight" />
-        </div>
-        <div className="relative mx-auto grid max-w-screen-2xl items-center gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:px-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,460px)] xl:gap-16">
+      {/* Hero: an off-road photo under a navy fade. Phones: photo on top, text below. Desktop: text left, wheel right. */}
+      <section id="home-hero" className="relative overflow-hidden bg-brand text-brand-foreground">
+        <img
+          src={heroLarge}
+          srcSet={`${heroSmall} 960w, ${heroLarge} 1920w`}
+          sizes="100vw"
+          alt=""
+          aria-hidden
+          fetchPriority="high"
+          className="absolute inset-x-0 top-0 h-[330px] w-full object-cover object-[78%_40%] saturate-[1.1] contrast-[1.08] md:inset-0 md:h-full md:object-[75%_50%]"
+        />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[330px] bg-[#0b2a8a] opacity-20 mix-blend-color md:inset-0 md:h-full" aria-hidden />
+        {/* Phones: fade the photo down into navy so the headline sits on solid colour. */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[332px] bg-[linear-gradient(180deg,rgb(11_27_63/0.2)_0%,transparent_35%,rgb(11_27_63/0.7)_75%,var(--brand)_100%)] md:hidden" aria-hidden />
+        {/* Desktop: navy behind the text on the left, the wheel clear on the right, a blue glow from the corner. */}
+        <div className="pointer-events-none absolute inset-0 hidden bg-[linear-gradient(90deg,var(--brand)_0%,rgb(11_27_63/0.95)_30%,rgb(11_27_63/0.55)_52%,transparent_78%)] md:block" aria-hidden />
+        <div className="pointer-events-none absolute inset-0 hidden bg-[radial-gradient(ellipse_50%_65%_at_100%_100%,rgb(29_79_216/0.5),transparent_70%)] md:block" aria-hidden />
+        <div className="pointer-events-none absolute inset-0 hidden shadow-[inset_0_-120px_120px_-40px_rgb(11_27_63/0.9),inset_0_0_160px_rgb(5_12_30/0.5)] md:block" aria-hidden />
+
+        <div className="relative mx-auto grid max-w-screen-2xl gap-8 px-5 pt-[200px] pb-8 sm:px-6 md:grid-cols-2 md:items-center md:py-28 lg:px-8 lg:py-32">
           <div>
-          <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold tracking-wider text-highlight uppercase">
-            <Bike className="size-3.5" /> Motorbike spare parts
-          </p>
-          <h1 className="max-w-2xl text-5xl leading-[0.95] font-bold uppercase italic sm:text-7xl">
-            Genuine spares,<br /><span className="text-highlight">delivered.</span>
-          </h1>
-          <p className="mt-5 max-w-md text-white/75">Boxer, TVS, Haojin and more. Search by part name, part number or bike model.</p>
-          <SearchBox className="mt-8 max-w-xl [&_input]:h-12 [&_input]:rounded-xl [&_input]:text-base [&_svg]:left-3.5 [&_input]:pl-10" />
-          <div className="mt-8 flex flex-wrap gap-x-8 gap-y-3 text-sm text-white/85">
-            <span className="flex items-center gap-2"><BadgeCheck className="size-4 text-highlight" /> Genuine brands</span>
-            <span className="flex items-center gap-2"><ShieldCheck className="size-4 text-highlight" /> Quality checked</span>
-            <span className="flex items-center gap-2"><Truck className="size-4 text-highlight" /> Delivery countrywide</span>
+            <h1 className="text-[54px] leading-[0.92] font-extrabold tracking-[-0.01em] uppercase italic sm:text-7xl lg:text-[88px]">
+              Genuine spares,<br /><span className="text-highlight">delivered.</span>
+            </h1>
+            <p className="mt-4 max-w-md text-[15px] leading-relaxed text-white/80 sm:mt-6 sm:text-[17px]">Boxer, TVS, Haojin and more. Search by part name, part number or bike model.</p>
+            <SearchBox
+              className="mt-6 max-w-xl sm:mt-8 [&_input]:h-14 [&_input]:rounded-2xl [&_input]:border-0 [&_input]:pl-11 [&_input]:text-base [&_input]:shadow-[0_20px_40px_-18px_rgb(0_0_0/0.6)] [&_svg]:left-4"
+            />
+            <div className="-mx-5 mt-4 flex gap-2 overflow-x-auto px-5 text-[13px] whitespace-nowrap [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0 [&::-webkit-scrollbar]:hidden">
+              <span className="hidden self-center text-white/60 sm:inline">Popular:</span>
+              {POPULAR.map((q) => (
+                <Link key={q} to={`/products?q=${encodeURIComponent(q)}`} className="rounded-full bg-white/10 px-3.5 py-2 text-white transition hover:bg-white/20 sm:px-3 sm:py-1">{q}</Link>
+              ))}
+            </div>
           </div>
-          </div>
-          {!!deals.data?.results.length && <HeroOffers deals={deals.data.results} count={deals.data.count} />}
+          {wheels && (
+            <div className="hidden self-end justify-self-end md:block">
+              <Link to={`/products?category=${wheels.slug}`}
+                className="inline-flex items-center gap-3 rounded-full border border-white/20 bg-white/10 py-2 pr-2 pl-5 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/20">
+                Shop {wheels.name.toLowerCase()}
+                <span className="flex size-9 items-center justify-center rounded-full bg-primary"><ArrowRight className="size-4" /></span>
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Categories: a slim icon row on desktop; on phones one button opens them all in a sheet (no sideways scrolling). */}
-      <nav aria-label="Categories" className="border-b bg-card/60">
+      {/* Categories: a slim icon row on desktop; on phones a 4-column grid, the last tile opens the full list. */}
+      <nav aria-label="Categories" className="border-b bg-card">
         <div className="mx-auto max-w-screen-2xl px-4 py-4 sm:px-6 lg:px-8 lg:py-5">
-          <div className="lg:hidden">
+          <div className="grid grid-cols-4 gap-x-1.5 gap-y-1 sm:grid-cols-8 lg:hidden">
+            {categories.data?.slice(0, 7).map((c) => <CategoryTile key={c.id} category={c} />)}
             <CategorySheet categories={categories.data ?? []} />
           </div>
           <div className="hidden grid-cols-9 gap-1 lg:grid">
-            {categories.data?.map((c) => {
-              const Icon = categoryIcon(c.name)
-              return (
-                <Link key={c.id} to={`/products?category=${c.slug}`}
-                  className="group flex flex-col items-center gap-2 rounded-xl px-1 py-2 text-center text-[13px] leading-tight font-medium transition hover:bg-primary/5 hover:text-primary">
-                  <span className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary transition group-hover:bg-primary group-hover:text-primary-foreground">
-                    <Icon className="size-5" />
-                  </span>
-                  {c.name}
-                </Link>
-              )
-            })}
+            {categories.data?.map((c) => <CategoryTile key={c.id} category={c} />)}
           </div>
         </div>
       </nav>
 
-      <section className="mx-auto max-w-screen-2xl px-4 pt-14 pb-14 sm:px-6 lg:px-8">
+      {!!deals.data?.results.length && (
+        <section aria-label="Offers" className="mx-auto max-w-screen-2xl px-4 pt-12 sm:px-6 lg:px-8">
+          <SectionHead
+            kicker={<span className="inline-flex items-center gap-1 text-red-600"><Tag className="size-3.5" /> Offers</span>}
+            title={<>Save up to <span className="text-primary">{Math.max(...deals.data.results.map((d) => d.deal_percent ?? 0))}%</span></>}
+            link={{ to: '/products?deals=1&sort=deal', label: deals.data.count > 1 ? `All ${deals.data.count} offers` : 'View offer' }}
+          />
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 [&>*:nth-child(n+5)]:hidden md:[&>*:nth-child(n+4)]:hidden lg:[&>*:nth-child(4)]:flex 2xl:[&>*:nth-child(5)]:flex">
+            {deals.data.results.map((p) => <ProductCard key={p.id} product={p} />)}
+          </div>
+        </section>
+      )}
+
+      <section className="mx-auto max-w-screen-2xl px-4 pt-12 pb-14 sm:px-6 lg:px-8">
+        <SectionHead kicker="Just in" title="Latest parts" link={{ to: '/products?sort=newest', label: 'View all parts' }} />
         <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 [&>*:nth-child(n+9)]:hidden 2xl:[&>*:nth-child(n+9)]:flex">
           {latest.data?.results.map((p) => <ProductCard key={p.id} product={p} />)}
         </div>
@@ -122,81 +151,44 @@ export default function Home() {
   )
 }
 
-/** Supplier offers the admin approved, in the hero: one featured offer at a time, the rest as tiles below it. */
-function HeroOffers({ deals, count }: { deals: Card[]; count: number }) {
-  const [i, setI] = useState(0)
-  const [paused, setPaused] = useState(false)
-  const slides = deals.slice(0, 5)
-  useEffect(() => {
-    if (slides.length < 2 || paused) return
-    const t = setInterval(() => setI((n) => (n + 1) % slides.length), 5000)
-    return () => clearInterval(t)
-  }, [slides.length, paused])
-  const best = Math.max(...deals.map((d) => d.deal_percent ?? 0))
-  const d = slides[i % slides.length]
-
+/** Small blue label, big italic title and a "view all" link above a product grid. */
+function SectionHead({ kicker, title, link }: { kicker: ReactNode; title: ReactNode; link: { to: string; label: string } }) {
   return (
-    <div className="relative" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
-      <div className="mb-3 flex items-end justify-between gap-3">
-        <p className="font-heading text-2xl leading-none font-bold whitespace-nowrap uppercase italic sm:text-3xl">
-          <span className="mr-2 inline-flex translate-y-[-2px] items-center gap-1 rounded-md bg-red-600 px-2 py-1 align-middle font-sans text-xs font-bold tracking-wider not-italic"><Tag className="size-3.5" /> Offers</span>
-          Save up to <span className="text-highlight">{best}%</span>
-        </p>
-        <Link to="/products?deals=1&sort=deal" className="flex shrink-0 items-center gap-1 text-sm font-medium text-white/85 hover:text-white">
-          {count > 1 ? `All ${count}` : 'View'} <ArrowRight className="size-4" />
-        </Link>
+    <div className="mb-5 flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+      <div>
+        <p className="text-xs font-bold tracking-[0.14em] text-primary uppercase">{kicker}</p>
+        <h2 className="mt-1 text-3xl leading-none font-bold uppercase italic sm:text-4xl">{title}</h2>
       </div>
-
-      <Link key={d.id} to={`/products/${d.slug}`}
-        className="group flex animate-in overflow-hidden rounded-2xl bg-card text-card-foreground shadow-[0_30px_60px_-24px_rgb(0_0_0/0.6)] ring-1 ring-white/10 duration-300 fade-in slide-in-from-right-4">
-        <span className={`relative flex w-[44%] shrink-0 items-center justify-center overflow-hidden ${d.image ? 'bg-[radial-gradient(circle_at_50%_40%,var(--card),var(--secondary))]' : 'bg-brand text-brand-foreground'}`}>
-          {d.image ? <img src={d.image} alt="" className="h-full max-h-56 w-full object-contain p-4 mix-blend-multiply dark:mix-blend-normal transition duration-300 group-hover:scale-105" /> : <NoPhoto brand={d.brand.name} type={d.category.name} />}
-          <span className="absolute top-2.5 left-2.5 rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white shadow">−{d.deal_percent}%</span>
-        </span>
-        <span className="flex min-h-48 min-w-0 flex-1 flex-col p-4 sm:p-5">
-          <span className="text-[11px] font-bold tracking-wider text-primary uppercase">{d.brand.name}</span>
-          <span className="mt-0.5 line-clamp-2 font-semibold leading-snug group-hover:text-primary">{d.name}</span>
-          {d.fits.length > 0 && <span className="mt-1 line-clamp-1 text-xs text-muted-foreground">Fits {d.fits.slice(0, 2).join(', ')}</span>}
-          <span className="mt-auto pt-3">
-            {d.was_price && <s className="block text-xs text-muted-foreground">{money(d.was_price)}</s>}
-            <span className="figure text-3xl leading-none text-red-600 dark:text-red-400">{money(d.min_price)}</span>
-          </span>
-          <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-primary">View offer <ArrowRight className="size-4 transition group-hover:translate-x-0.5" /></span>
-        </span>
+      <Link to={link.to} className="flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
+        {link.label} <ArrowRight className="size-4" />
       </Link>
-
-      {slides.length > 1 && (
-        <div className="mt-3 grid grid-cols-5 gap-2">
-          {slides.map((s, n) => {
-            const on = n === i % slides.length
-            return (
-              <button key={s.id} type="button" aria-label={`Show ${s.name}`} aria-current={on} onClick={() => setI(n)} onMouseEnter={() => setI(n)}
-                className={`relative aspect-square overflow-hidden rounded-xl transition ${on ? 'ring-2 ring-highlight' : 'opacity-70 ring-1 ring-white/20 hover:opacity-100'} ${s.image ? 'bg-card' : 'bg-white/10'}`}>
-                {s.image
-                  ? <img src={s.image} alt="" className="h-full w-full object-contain p-1.5 mix-blend-multiply dark:mix-blend-normal" />
-                  : <span className="flex h-full items-center justify-center px-1 text-center font-heading text-[11px] leading-none font-bold uppercase italic">{s.brand.name}</span>}
-                <span className="absolute inset-x-0 bottom-0 bg-red-600 py-px text-center text-[10px] font-bold text-white">−{s.deal_percent}%</span>
-              </button>
-            )
-          })}
-        </div>
-      )}
     </div>
   )
 }
 
-/** Phones: "Shop by category" opens every category as a grid of big icon tiles in a bottom sheet. */
+const tileClass = 'group flex flex-col items-center gap-2 rounded-xl px-0.5 py-1.5 text-center text-[11.5px] leading-tight font-semibold transition hover:text-primary lg:px-1 lg:py-2.5 lg:text-[13px] lg:hover:bg-primary/5'
+const tileIconClass = 'flex size-12 items-center justify-center rounded-2xl transition'
+
+function CategoryTile({ category: c }: { category: CategoryNode }) {
+  const Icon = categoryIcon(c.name)
+  return (
+    <Link to={`/products?category=${c.slug}`} className={tileClass}>
+      <span className={`${tileIconClass} bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground`}>
+        <Icon className="size-5" />
+      </span>
+      {c.name}
+    </Link>
+  )
+}
+
+/** Phones: the "All parts" tile opens every category as a grid of big icon tiles in a bottom sheet. */
 function CategorySheet({ categories }: { categories: CategoryNode[] }) {
   const [open, setOpen] = useState(false)
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger render={
-        <button type="button" className="flex w-full items-center gap-3 rounded-xl border bg-card px-3 py-2.5 text-left text-sm font-medium shadow-xs transition hover:border-primary/40" />
-      }>
-        <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary"><LayoutGrid className="size-4" /></span>
-        <span className="flex-1">Shop by category</span>
-        <span className="text-xs text-muted-foreground">{categories.length || ''}</span>
-        <ChevronRight className="size-4 text-muted-foreground" />
+      <SheetTrigger render={<button type="button" className={tileClass} />}>
+        <span className={`${tileIconClass} bg-primary text-primary-foreground`}><LayoutGrid className="size-5" /></span>
+        All categories
       </SheetTrigger>
       <SheetContent side="bottom" showCloseButton={false} className="max-h-[88svh] gap-0 rounded-t-2xl">
         <div className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-muted-foreground/25" aria-hidden />
