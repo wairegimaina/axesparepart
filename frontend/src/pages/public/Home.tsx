@@ -30,8 +30,6 @@ export default function Home() {
     queryKey: ['products', 'deals'],
     queryFn: () => get<Paginated<Card>>('/products/?deals=1&sort=deal&page_size=8'),
   })
-  // The hero photo is a wheel, so its one link goes to that category when the shop has it.
-  const wheels = categories.data?.find((c) => /wheel|tyre|tire/i.test(c.name))
 
   return (
     <>
@@ -73,15 +71,6 @@ export default function Home() {
               ))}
             </div>
           </div>
-          {wheels && (
-            <div className="hidden self-end justify-self-end md:block">
-              <Link to={`/products?category=${wheels.slug}`}
-                className="inline-flex items-center gap-3 rounded-full border border-white/20 bg-white/10 py-2 pr-2 pl-5 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/20">
-                Shop {wheels.name.toLowerCase()}
-                <span className="flex size-9 items-center justify-center rounded-full bg-primary"><ArrowRight className="size-4" /></span>
-              </Link>
-            </div>
-          )}
         </div>
       </section>
 
